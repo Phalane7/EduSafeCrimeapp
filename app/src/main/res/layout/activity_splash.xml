@@ -1,0 +1,16 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/deep_navy" android:gravity="center" android:orientation="vertical" android:padding="24dp">
+    <!--  Logo placeholder  -->
+    <FrameLayout android:layout_width="120dp" android:layout_height="120dp" android:background="@drawable/bg_logo_circle">
+        <!--  Swap this ImageView's src for the real EduSafe logo later  -->
+        <ImageView android:id="@+id/ivLogo" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="EduSafe logo" android:padding="24dp" android:scaleType="centerInside" android:src="@android:color/transparent"
+            tools:ignore="HardcodedText" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:fontFamily="@font/inter_regular" android:text="LOGO" android:textColor="@color/deep_navy" android:textSize="14sp"
+            tools:ignore="HardcodedText" />
+    </FrameLayout>
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:fontFamily="@font/inter_bold" android:text="EduSafe" android:textColor="@color/white" android:textSize="30sp"
+        tools:ignore="HardcodedText" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:fontFamily="@font/inter_regular" android:text="Campus safety. One tap away." android:textColor="@color/light_blue" android:textSize="14sp"
+        tools:ignore="HardcodedText" />
+</LinearLayout>

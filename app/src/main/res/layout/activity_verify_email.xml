@@ -1,0 +1,85 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/white" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_horizontal" android:orientation="vertical" android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingTop="40dp" android:paddingBottom="32dp">
+        <!--  Email icon placeholder  -->
+        <FrameLayout android:layout_width="110dp" android:layout_height="110dp" android:background="@drawable/bg_logo_circle">
+            <!--  Swap this ImageView's src for a real email/mail icon later  -->
+            <ImageView android:id="@+id/ivEmailIcon" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="Email icon" android:padding="30dp" android:scaleType="centerInside" android:src="@android:color/transparent"
+                tools:ignore="HardcodedText" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:fontFamily="@font/inter_regular" android:gravity="center" android:text="EMAIL\nICON" android:textAlignment="center" android:textColor="@color/deep_navy" android:textSize="12sp"
+                tools:ignore="HardcodedText" />
+        </FrameLayout>
+        <TextView style="@style/H2" android:layout_marginTop="22dp" android:text="Verify your email"
+            tools:ignore="HardcodedText" />
+
+        <TextView
+            android:id="@+id/tvSentTo"
+            style="@style/BodyText"
+            android:layout_width="match_parent"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:text="We have sent a 6-digit code to\nname@vossie.net"
+            tools:ignore="HardcodedText,TextContrastCheck" />
+        <!--  OTP boxes  -->
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="26dp" android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/etOtp1"
+                style="@style/OtpBox"
+                tools:ignore="Autofill,LabelFor,SpeakableTextPresentCheck,TouchTargetSizeCheck" />
+
+            <EditText
+                android:id="@+id/etOtp2"
+                style="@style/OtpBox"
+                tools:ignore="Autofill,LabelFor,TouchTargetSizeCheck,SpeakableTextPresentCheck" />
+
+            <EditText
+                android:id="@+id/etOtp3"
+                style="@style/OtpBox"
+                tools:ignore="Autofill,LabelFor,SpeakableTextPresentCheck,TouchTargetSizeCheck" />
+
+            <EditText
+                android:id="@+id/etOtp4"
+                style="@style/OtpBox"
+                tools:ignore="Autofill,LabelFor,SpeakableTextPresentCheck,TouchTargetSizeCheck" />
+
+            <EditText
+                android:id="@+id/etOtp5"
+                style="@style/OtpBox"
+                tools:ignore="Autofill,LabelFor,SpeakableTextPresentCheck,TouchTargetSizeCheck" />
+
+            <EditText
+                android:id="@+id/etOtp6"
+                style="@style/OtpBox"
+                android:layout_marginEnd="0dp"
+                tools:ignore="Autofill,LabelFor,SpeakableTextPresentCheck,TouchTargetSizeCheck" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvResendTimer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:fontFamily="@font/inter_regular"
+            android:text="Resend code in 2:45"
+            android:textColor="@color/text_gray"
+            android:textSize="12sp"
+            tools:ignore="HardcodedText,TextContrastCheck" />
+        <Button android:id="@+id/btnVerify" style="@style/PrimaryButton" android:layout_width="match_parent" android:layout_marginTop="30dp" android:text="Verify"
+            tools:ignore="HardcodedText,VisualLintButtonSize" />
+
+        <TextView
+            android:id="@+id/tvGoBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:fontFamily="@font/inter_regular"
+            android:text="Wrong email? &lt; Go back"
+            android:textColor="@color/ink"
+            android:textSize="13sp"
+            tools:ignore="HardcodedText,TouchTargetSizeCheck" />
+    </LinearLayout>
+</ScrollView>

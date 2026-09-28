@@ -1,0 +1,36 @@
+<resources>
+
+    <!-- Keep your other existing strings here -->
+
+    <string name="create_new_password">CREATE NEW PASSWORD</string>
+
+    <string name="please_enter_new_password">
+        Please enter a new password.
+    </string>
+
+    <string name="enter_new_password">
+        Enter new password
+    </string>
+
+    <string name="confirm_new_password">
+        Confirm new password
+    </string>
+
+    <string name="passwords_do_not_match">
+        Passwords do not match.
+    </string>
+
+    <string name="update_password">
+        Update Password
+    </string>
+
+    <string name="back_to_log_in">
+        &lt; Back to log in
+    </string>
+    <string name="email_address">Email address</string>
+    <string name="forgot_your_password">FORGOT YOUR PASSWORD?</string>
+
+    <string name="app_name">EduSafe</string>
+
+
+</resources>

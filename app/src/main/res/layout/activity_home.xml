@@ -1,0 +1,14 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/light_blue" android:gravity="center" android:orientation="vertical" android:padding="24dp">
+    <TextView style="@style/H1" android:text="You're in!"
+        tools:ignore="HardcodedText" />
+
+    <TextView
+        style="@style/BodyText"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:text="This is a placeholder Home screen.\nReplace activity_home.xml with the real dashboard design when it's ready."
+        android:textColor="#616161"
+        tools:ignore="HardcodedText" />
+</LinearLayout>

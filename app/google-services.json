@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "275032421638",
+    "project_id": "group526",
+    "storage_bucket": "group526.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:275032421638:android:55a47f23807911518c5a87",
+        "android_client_info": {
+          "package_name": "com.example.edusafe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBG8B843ghFstNWI6yatjlgHl8ahZu7tD0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

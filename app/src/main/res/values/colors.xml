@@ -1,0 +1,18 @@
+<resources>
+    <!--  EduSafe brand palette  -->
+    <color name="deep_navy">#02225D</color>
+    <color name="signal_red">#B50218</color>
+    <color name="glass_red">#2E1A2E</color>
+    <!--  solid fallback; real glass_red is rgba(181,2,24,0.18), used as tint below  -->
+    <color name="glass_red_overlay">#2EB50218</color>
+    <!--  ARGB form of rgba(181,2,24,0.18) for overlay use  -->
+    <color name="ink">#111111</color>
+    <color name="light_blue">#DCE6F7</color>
+    <color name="white">#FFFFFF</color>
+    <!--  Supporting neutrals (not in brand sheet, used for hints/borders only)  -->
+    <color name="text_gray">#7A7F8C</color>
+    <color name="hint_gray">#A9AFBC</color>
+    <color name="border_gray">#D7DCE6</color>
+    <color name="toggle_bg">#F0F3F9</color>
+    <color name="placeholder_gray">#D6D8DC</color>
+</resources>
