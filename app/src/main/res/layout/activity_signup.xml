@@ -1,9 +1,26 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/white" android:fillViewport="true">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingTop="24dp" android:paddingBottom="32dp">
-        <!--  Log in / Sign up toggle  -->
-        <LinearLayout android:layout_width="match_parent" android:layout_height="52dp" android:orientation="horizontal" android:background="@drawable/bg_toggle_container" android:padding="4dp">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="32dp">
+
+        <!-- Log in / Sign up toggle -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:orientation="horizontal"
+            android:background="@drawable/bg_toggle_container"
+            android:padding="4dp">
 
             <TextView
                 android:id="@+id/btnLogin"
@@ -33,12 +50,36 @@
                 android:textColor="@color/white"
                 android:textSize="15sp"
                 tools:ignore="HardcodedText,TouchTargetSizeCheck" />
+
         </LinearLayout>
-        <!--  Heading  -->
-        <TextView style="@style/H1" android:layout_marginTop="28dp" android:text="CREATE YOUR ACCOUNT"
+
+        <!-- Success message -->
+        <TextView
+            android:id="@+id/tvAccountSuccess"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_success_message"
+            android:fontFamily="@font/inter_bold"
+            android:gravity="center"
+            android:padding="14dp"
+            android:text="Account successfully created!"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:visibility="gone"
             tools:ignore="HardcodedText" />
-        <!--  First Name  -->
-        <TextView style="@style/FieldLabel" android:text="First Name"
+
+        <!-- Heading -->
+        <TextView
+            style="@style/H1"
+            android:layout_marginTop="28dp"
+            android:text="CREATE YOUR ACCOUNT"
+            tools:ignore="HardcodedText" />
+
+        <!-- First Name -->
+        <TextView
+            style="@style/FieldLabel"
+            android:text="First Name"
             tools:ignore="HardcodedText" />
 
         <EditText
@@ -46,8 +87,11 @@
             style="@style/FieldInput"
             android:inputType="textPersonName"
             tools:ignore="Autofill,LabelFor,SpeakableTextPresentCheck,VisualLintTextFieldSize" />
-        <!--  Surname  -->
-        <TextView style="@style/FieldLabel" android:text="Surname"
+
+        <!-- Surname -->
+        <TextView
+            style="@style/FieldLabel"
+            android:text="Surname"
             tools:ignore="HardcodedText" />
 
         <EditText
@@ -55,8 +99,11 @@
             style="@style/FieldInput"
             android:inputType="textPersonName"
             tools:ignore="Autofill,LabelFor,SpeakableTextPresentCheck,VisualLintTextFieldSize" />
-        <!--  Phone Number  -->
-        <TextView style="@style/FieldLabel" android:text="Phone Number"
+
+        <!-- Phone Number -->
+        <TextView
+            style="@style/FieldLabel"
+            android:text="Phone Number"
             tools:ignore="HardcodedText" />
 
         <EditText
@@ -64,8 +111,11 @@
             style="@style/FieldInput"
             android:inputType="phone"
             tools:ignore="Autofill,LabelFor,SpeakableTextPresentCheck,VisualLintTextFieldSize" />
-        <!--  Email Address  -->
-        <TextView style="@style/FieldLabel" android:text="Email Address"
+
+        <!-- Email Address -->
+        <TextView
+            style="@style/FieldLabel"
+            android:text="Email Address"
             tools:ignore="HardcodedText" />
 
         <EditText
@@ -74,11 +124,24 @@
             android:autofillHints=""
             android:hint="name@vossie.net"
             android:inputType="textEmailAddress"
-            tools:ignore="DuplicateSpeakableTextCheck,HardcodedText,TextContrastCheck,TextContrastCheck,VisualLintTextFieldSize" />
-        <TextView android:id="@+id/tvEmailError" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:fontFamily="@font/inter_regular" android:text="Invalid email. Please use your @vossie.net address." android:textColor="@color/signal_red" android:textSize="11sp" android:visibility="gone"
+            tools:ignore="DuplicateSpeakableTextCheck,HardcodedText,TextContrastCheck,VisualLintTextFieldSize" />
+
+        <TextView
+            android:id="@+id/tvEmailError"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:fontFamily="@font/inter_regular"
+            android:text="Invalid email. Please use your @vossie.net address."
+            android:textColor="@color/signal_red"
+            android:textSize="11sp"
+            android:visibility="gone"
             tools:ignore="HardcodedText" />
-        <!--  Verify Email Address  -->
-        <TextView style="@style/FieldLabel" android:text="Verify Email Address"
+
+        <!-- Verify Email Address -->
+        <TextView
+            style="@style/FieldLabel"
+            android:text="Verify Email Address"
             tools:ignore="HardcodedText" />
 
         <EditText
@@ -87,8 +150,11 @@
             android:hint="name@vossie.net"
             android:inputType="textEmailAddress"
             tools:ignore="Autofill,HardcodedText,TextContrastCheck,VisualLintTextFieldSize" />
-        <!--  Password  -->
-        <TextView style="@style/FieldLabel" android:text="Password"
+
+        <!-- Password -->
+        <TextView
+            style="@style/FieldLabel"
+            android:text="Password"
             tools:ignore="HardcodedText" />
 
         <EditText
@@ -97,13 +163,34 @@
             android:hint="At least 8 characters"
             android:inputType="textPassword"
             tools:ignore="Autofill,HardcodedText,TextContrastCheck,VisualLintTextFieldSize" />
-        <!--  Verify Password  -->
-        <TextView style="@style/FieldLabel" android:text="Verify Password"
+
+        <!-- Verify Password -->
+        <TextView
+            style="@style/FieldLabel"
+            android:text="Verify Password"
             tools:ignore="HardcodedText" />
-        <EditText android:id="@+id/etVerifyPassword" style="@style/FieldInput" android:hint="At least 8 characters" android:inputType="textPassword"
+
+        <EditText
+            android:id="@+id/etVerifyPassword"
+            style="@style/FieldInput"
+            android:hint="At least 8 characters"
+            android:inputType="textPassword"
             tools:ignore="Autofill,HardcodedText,VisualLintTextFieldSize" />
-        <!--  Create Account button  -->
-        <Button android:id="@+id/btnCreateAccount" style="@style/PrimaryButton" android:layout_width="wrap_content" android:layout_marginTop="30dp" android:layout_gravity="center_horizontal" android:minWidth="220dp" android:paddingStart="32dp" android:paddingEnd="32dp" android:text="Create Account"
+
+        <!-- Create Account button -->
+        <Button
+            android:id="@+id/btnCreateAccount"
+            style="@style/PrimaryButton"
+            android:layout_width="wrap_content"
+            android:layout_marginTop="30dp"
+            android:layout_gravity="center_horizontal"
+            android:minWidth="220dp"
+            android:paddingStart="32dp"
+            android:paddingEnd="32dp"
+            android:text="Create Account"
             tools:ignore="HardcodedText" />
+
     </LinearLayout>
+
 </ScrollView>
+

@@ -1,6 +1,33 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
-    <!-- Needed for Firebase Auth, Firestore and Cloud Functions -->
-    <uses-permission android:name="android.permission.INTERNET" />
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Internet permission for Firebase and maps -->
+    <uses-permission
+        android:name="android.permission.INTERNET" />
+
+    <!-- Location permissions for SOS and crime map -->
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Permission to send emergency SMS alerts -->
+    <uses-permission
+        android:name="android.permission.SEND_SMS" />
+
+    <!-- Permission for notifications -->
+    <uses-permission
+        android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+        Telephony is optional.
+        This allows EduSafe to run on devices without
+        telephone hardware, such as some tablets.
+    -->
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -12,62 +39,106 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.EduSafe">
 
-        <!-- 1. LAUNCHER: the first screen the app opens on -->
+        <!-- Main Activity: Bottom Navigation -->
         <activity
-            android:name=".SplashActivity"
+            android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.EduSafe.Splash">
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action
+                    android:name="android.intent.action.MAIN" />
+
+                <category
+                    android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
 
-        <!-- 2. Get Started -->
+        <!-- SOS Active Screen -->
+        <activity
+            android:name=".ui.sos.SosActiveActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+        <!-- Emergency SOS Activity -->
+        <activity
+            android:name=".ui.sos.EmergencySosActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+        <!-- Crime Map Activity -->
+        <activity
+            android:name=".ui.map.CrimeMapActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+        <!-- Splash Screen -->
+        <activity
+            android:name=".SplashActivity"
+            android:exported="false"
+            android:theme="@style/Theme.EduSafe.Splash" />
+
+        <!-- Get Started Screen -->
         <activity
             android:name=".GetStartedActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
-        <!-- 3. Log in -->
+        <!-- Login Screen -->
         <activity
             android:name=".LoginActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:windowSoftInputMode="adjustResize" />
 
-        <!-- 4. Sign up -->
+        <!-- Registration Screen -->
         <activity
             android:name=".SignUpActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:windowSoftInputMode="adjustResize" />
 
-        <!-- 5. Forgot password flow -->
+        <!-- Forgot Password Screen -->
         <activity
             android:name=".ForgotPasswordActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Email OTP Verification Screen -->
         <activity
             android:name=".VerifyEmailActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Create New Password Screen -->
         <activity
             android:name=".CreateNewPasswordActivity"
-            android:exported="false"
+            android:exported="true"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
-            android:windowSoftInputMode="adjustResize" />
+            android:windowSoftInputMode="adjustResize">
 
-        <!-- 6. Home (placeholder, shown after login) -->
-        <activity
-            android:name=".HomeActivity"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+            <intent-filter>
+                <action
+                    android:name="android.intent.action.VIEW" />
+
+                <category
+                    android:name="android.intent.category.DEFAULT" />
+
+                <category
+                    android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="edusafe"
+                    android:host="resetpassword" />
+
+            </intent-filter>
+
+        </activity>
 
     </application>
 
 </manifest>
+

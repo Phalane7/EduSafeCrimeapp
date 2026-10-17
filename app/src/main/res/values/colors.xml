@@ -15,4 +15,23 @@
     <color name="border_gray">#D7DCE6</color>
     <color name="toggle_bg">#F0F3F9</color>
     <color name="placeholder_gray">#D6D8DC</color>
+
+    <color name="navy">#02225D</color>
+
+    <color name="red_dark">#6E0110</color>
+
+
+    <color name="red">#B50218</color>
+
+    <color name="muted">#5B6475</color>
+    <color name="nav_inactive">#8FA0C9</color>
+    <color name="muted_pink_text">#F5D6D6</color>
+    <!--  Colors the project template's theme files still use  -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+
 </resources>
