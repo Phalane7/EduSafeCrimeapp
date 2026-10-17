@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/light_blue"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <FrameLayout
+        android:id="@+id/container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingVertical="4dp">
+
+        <TextView
+            android:id="@+id/tabHome"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:contentDescription="Home"
+            android:drawablePadding="2dp"
+            android:drawableTint="@color/navy"
+            android:drawableTop="@drawable/ic_home"
+            android:gravity="center"
+            android:minHeight="56dp"
+            android:paddingTop="6dp"
+            android:text="Home"
+            android:textColor="@color/navy"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tabMaps"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:contentDescription="Maps"
+            android:drawablePadding="2dp"
+            android:drawableTint="@color/muted"
+            android:drawableTop="@drawable/ic_map"
+            android:gravity="center"
+            android:minHeight="56dp"
+            android:paddingTop="6dp"
+            android:text="Maps"
+            android:textColor="@color/muted"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tabSos"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="@drawable/bg_sos"
+            android:contentDescription="SOS"
+            android:gravity="center"
+            android:text="SOS"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tabReports"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:contentDescription="Reports"
+            android:drawablePadding="2dp"
+            android:drawableTint="@color/muted"
+            android:drawableTop="@drawable/ic_reports"
+            android:gravity="center"
+            android:minHeight="56dp"
+            android:paddingTop="6dp"
+            android:text="Reports"
+            android:textColor="@color/muted"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tabProfile"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:contentDescription="Profile"
+            android:drawablePadding="2dp"
+            android:drawableTint="@color/muted"
+            android:drawableTop="@drawable/ic_person"
+            android:gravity="center"
+            android:minHeight="56dp"
+            android:paddingTop="6dp"
+            android:text="Profile"
+            android:textColor="@color/muted"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/light_blue"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- PROFILE HEADING -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="PROFILE"
+            android:textColor="@color/ink"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <!-- USER PROFILE CARD -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/bg_card"
+            android:gravity="center_vertical"
+            android:minHeight="120dp"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <!-- USER INITIALS -->
+            <TextView
+                android:id="@+id/tvInitials"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:background="@drawable/bg_profile_avatar"
+                android:gravity="center"
+                android:text="E"
+                android:textColor="@color/navy"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="EduSafe user"
+                    android:textColor="@color/ink"
+                    android:textSize="19sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:text="View and manage your details"
+                    android:textColor="@color/muted"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/btnEditProfile"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:clickable="true"
+                android:contentDescription="Edit profile details"
+                android:focusable="true"
+                android:gravity="center"
+                android:paddingHorizontal="12dp"
+                android:text="Edit"
+                android:textColor="@color/navy"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- YOUR EDU SAFE HEADING -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:text="YOUR EDU SAFE"
+            android:textColor="@color/ink"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <!-- MY INCIDENT REPORTS -->
+        <TextView
+            android:id="@+id/btnReports"
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_card"
+            android:clickable="true"
+            android:contentDescription="Open my incident reports"
+            android:drawablePadding="14dp"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="20dp"
+            android:text="📋  My incident reports   ›"
+            android:textColor="@color/navy"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <!-- TRUSTED CONTACTS -->
+        <TextView
+            android:id="@+id/btnContacts"
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_card"
+            android:clickable="true"
+            android:contentDescription="Open trusted contacts"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="20dp"
+            android:text="☎  Trusted contacts   ›"
+            android:textColor="@color/navy"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <!-- HELP AND SAFETY -->
+        <TextView
+            android:id="@+id/btnHelp"
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_card"
+            android:clickable="true"
+            android:contentDescription="Open help and safety"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="20dp"
+            android:text="🛡  Help &amp; Safety   ›"
+            android:textColor="@color/navy"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <!-- SETTINGS -->
+        <TextView
+            android:id="@+id/btnSettings"
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_card"
+            android:clickable="true"
+            android:contentDescription="Open settings"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="20dp"
+            android:text="⚙  Settings   ›"
+            android:textColor="@color/navy"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+</ScrollView>

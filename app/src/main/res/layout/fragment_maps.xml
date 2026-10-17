@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/light_blue"
+    android:clipToPadding="false"
+    android:fillViewport="true"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingBottom="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MAPS &amp; SAFE PLACES"
+            android:textColor="@color/ink"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Find nearby help and share your position when you need it."
+            android:textColor="@color/muted"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_card"
+            android:gravity="center_vertical"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📍  YOUR LOCATION"
+                android:textColor="@color/navy"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Tap below to check your current location."
+                android:textColor="@color/muted"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/btnLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_chip_selected"
+                android:clickable="true"
+                android:contentDescription="Use my current location"
+                android:focusable="true"
+                android:gravity="center"
+                android:minHeight="48dp"
+                android:text="Check my location"
+                android:textColor="@color/white"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="FIND NEARBY"
+            android:textColor="@color/ink"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btnPolice"
+            style="@style/MapAction"
+            android:contentDescription="Find a nearby police station"
+            android:text="🚔   Police stations   ›" />
+
+        <TextView
+            android:id="@+id/btnHospital"
+            style="@style/MapAction"
+            android:contentDescription="Find a nearby hospital or clinic"
+            android:text="🏥   Hospitals &amp; clinics   ›" />
+
+        <TextView
+            android:id="@+id/btnCampusSecurity"
+            style="@style/MapAction"
+            android:contentDescription="Find campus security on a map"
+            android:text="🛡️   Campus security   ›" />
+
+        <TextView
+            android:id="@+id/btnSafePlaces"
+            style="@style/MapAction"
+            android:contentDescription="Find a safe public place nearby"
+            android:text="🏪   Safe public places   ›" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Map searches open in your maps app. Check the destination before travelling."
+            android:textColor="@color/muted"
+            android:textSize="12sp" />
+    </LinearLayout>
+</ScrollView>

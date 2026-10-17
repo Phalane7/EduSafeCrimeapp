@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/light_blue"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:paddingBottom="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ADMIN"
+            android:textColor="@color/ink"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_banner"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="STAFF WORKSPACE"
+                android:textColor="@color/light_blue"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Review incident reports and update their status."
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Local workspace · data is stored on this device"
+                android:textColor="@color/light_blue"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="REPORT OVERVIEW"
+            android:textColor="@color/ink"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <LinearLayout style="@style/StatCard" android:layout_marginEnd="8dp">
+                <TextView android:id="@+id/tvReports" style="@style/StatValue" android:text="0" />
+                <TextView style="@style/StatLabel" android:text="Reports" />
+            </LinearLayout>
+            <LinearLayout style="@style/StatCard" android:layout_marginHorizontal="4dp">
+                <TextView android:id="@+id/tvReview" style="@style/StatValue" android:text="0" />
+                <TextView style="@style/StatLabel" android:text="Under review" />
+            </LinearLayout>
+            <LinearLayout style="@style/StatCard" android:layout_marginStart="8dp">
+                <TextView android:id="@+id/tvResolved" style="@style/StatValue" android:text="0" />
+                <TextView style="@style/StatLabel" android:text="Resolved" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btnDashboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_chip_selected"
+            android:clickable="true"
+            android:contentDescription="Open the Security Dashboard and review reports"
+            android:focusable="true"
+            android:gravity="center"
+            android:minHeight="56dp"
+            android:text="Open Security Dashboard   ›"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btnSettings"
+            style="@style/MapAction"
+            android:contentDescription="Open app settings"
+            android:text="⚙️   App settings   ›" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_card"
+            android:padding="16dp"
+            android:text="This demo workspace has no staff sign-in or live campus connection. Report updates are saved locally on this device."
+            android:textColor="@color/muted"
+            android:textSize="13sp" />
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,40 @@
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/rootLayout" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/screen_bg">
+    <!--  Title, with the time-filter (sliders) button on the right  -->
+    <TextView android:id="@+id/screenTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:letterSpacing="0.08" android:text="CRIME MAP" android:textColor="@color/navy" android:textSize="18sp" android:textStyle="bold" app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"/>
+    <FrameLayout android:id="@+id/filterButton" android:layout_width="42dp" android:layout_height="42dp" android:layout_marginEnd="24dp" android:background="@drawable/bg_icon_button" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackgroundBorderless" app:layout_constraintTop_toTopOf="@id/screenTitle" app:layout_constraintBottom_toBottomOf="@id/screenTitle" app:layout_constraintEnd_toEndOf="parent">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:contentDescription="Filter by time" android:src="@drawable/ic_filter"/>
+    </FrameLayout>
+    <!--  Search  -->
+    <LinearLayout android:id="@+id/searchBar" android:layout_width="0dp" android:layout_height="48dp" android:layout_marginStart="24dp" android:layout_marginTop="16dp" android:layout_marginEnd="24dp" android:background="@drawable/bg_search_bar" android:gravity="center_vertical" android:orientation="horizontal" app:layout_constraintTop_toBottomOf="@id/screenTitle" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent">
+        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:layout_marginStart="16dp" android:contentDescription="Search" android:src="@drawable/ic_search"/>
+        <EditText android:id="@+id/searchInput" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@null" android:hint="Search area..." android:imeOptions="actionSearch" android:inputType="text" android:maxLines="1" android:paddingStart="10dp" android:paddingEnd="16dp" android:textColor="@color/ink" android:textColorHint="#8A93A3" android:textSize="14sp"/>
+    </LinearLayout>
+    <!--  Filter chips (scrolls sideways on narrow screens)  -->
+    <HorizontalScrollView android:id="@+id/chipScroll" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:clipToPadding="false" android:paddingStart="24dp" android:paddingEnd="16dp" android:scrollbars="none" app:layout_constraintTop_toBottomOf="@id/searchBar" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent">
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+            <TextView android:id="@+id/chipAll" style="@style/EduSafeChip" android:text="All"/>
+            <TextView android:id="@+id/chipRobbery" style="@style/EduSafeChip" android:text="Robbery"/>
+            <TextView android:id="@+id/chipTheft" style="@style/EduSafeChip" android:text="Theft"/>
+            <TextView android:id="@+id/chipAssault" style="@style/EduSafeChip" android:text="Assault"/>
+            <TextView android:id="@+id/chipOther" style="@style/EduSafeChip" android:text="Other"/>
+        </LinearLayout>
+    </HorizontalScrollView>
+    <!--  The map card. Rounded: everything inside is clipped to the rounded shape.  -->
+    <FrameLayout android:id="@+id/mapCard" android:layout_width="0dp" android:layout_height="0dp" android:layout_marginStart="20dp" android:layout_marginTop="12dp" android:layout_marginEnd="20dp" android:layout_marginBottom="4dp" android:background="@drawable/bg_map_card" android:clipToOutline="true" app:layout_constraintTop_toBottomOf="@id/chipScroll" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent">
+        <!--  the map is added here by OsmMapHelper  -->
+        <FrameLayout android:id="@+id/mapContainer" android:layout_width="match_parent" android:layout_height="match_parent"/>
+        <TextView android:id="@+id/mapAttribution" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="top|start" android:layout_margin="10dp" android:background="#99000000" android:paddingStart="6dp" android:paddingTop="2dp" android:paddingEnd="6dp" android:paddingBottom="2dp" android:textColor="@color/white" android:textSize="9sp"/>
+        <FrameLayout android:id="@+id/layersButton" android:layout_width="42dp" android:layout_height="42dp" android:layout_gravity="top|end" android:layout_margin="12dp" android:background="@drawable/bg_icon_button" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackgroundBorderless">
+            <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:contentDescription="Switch between satellite and street map" android:src="@drawable/ic_layers"/>
+        </FrameLayout>
+        <!--  The info card for the selected incident. Its elevation keeps it drawn above the map.  -->
+        <LinearLayout android:id="@+id/incidentCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:layout_margin="14dp" android:background="@drawable/bg_contact_card" android:elevation="6dp" android:gravity="center_vertical" android:orientation="horizontal" android:padding="14dp">
+            <ImageView android:id="@+id/incidentIcon" android:layout_width="46dp" android:layout_height="46dp" android:background="@drawable/bg_white_circle" android:contentDescription="Incident type" android:padding="11dp" android:src="@drawable/ic_glyph_robbery"/>
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:id="@+id/incidentTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="No incidents found" android:textColor="@color/ink" android:textSize="16sp" android:textStyle="bold"/>
+                <TextView android:id="@+id/incidentLocation" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="No reports available" android:textColor="#5B6577" android:textSize="13sp"/>
+                <TextView android:id="@+id/incidentReported" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="" android:textColor="#8A93A3" android:textSize="12sp"/>
+            </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

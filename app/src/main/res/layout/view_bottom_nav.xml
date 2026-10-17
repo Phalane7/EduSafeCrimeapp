@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  view_bottom_nav.xml
+  ====================================================================
+  Navy bottom bar (HOME / MAPS / [gap] / REPORTS / PROFILE) with a round
+  scoop cut out of its top edge and the raised, glossy SOS button
+  sitting in that scoop.
+
+  Layout idea: this FrameLayout is 42dp taller than the bar. The top 42dp
+  is empty and holds the upper half of the SOS button + its halo, so the
+  button sticks up above the bar but still sits INSIDE this view. That
+  way it is never clipped and the whole button can be tapped.
+
+  Include with width AND height set (both are required, or the include's
+  position settings are ignored):
+    <include
+        android:id="@+id/bottomNavInclude"
+        layout="@layout/view_bottom_nav"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content" ... />
+  ====================================================================
+-->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <com.eduvos.edusafe.ui.common.NotchedNavBar
+        android:id="@+id/navBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginTop="42dp">
+
+        <!-- transparent, so the notched navy shape behind it shows through -->
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottomNav"
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:background="@android:color/transparent"
+            app:itemIconSize="28dp"
+            app:itemIconTint="@color/bottom_nav_color"
+            app:itemTextColor="@color/bottom_nav_color"
+            app:itemTextAppearanceActive="@style/EduSafeNavLabel"
+            app:itemTextAppearanceInactive="@style/EduSafeNavLabel"
+            app:itemRippleColor="@android:color/transparent"
+            app:labelVisibilityMode="labeled"
+            app:menu="@menu/bottom_nav_menu" />
+
+        <!-- Height is set in code to the gesture-bar height, so the navy reaches the very bottom edge. -->
+        <View
+            android:id="@+id/navInsetSpacer"
+            android:layout_width="match_parent"
+            android:layout_height="0dp" />
+    </com.eduvos.edusafe.ui.common.NotchedNavBar>
+
+    <!-- Raised SOS button: soft halo, white ring, glossy red sphere, shine, label.
+         No elevation on any of these: higher-elevation views are drawn on top of
+         lower ones regardless of order, which would hide the layers. -->
+    <FrameLayout
+        android:id="@+id/sosFab"
+        android:layout_width="84dp"
+        android:layout_height="84dp"
+        android:layout_gravity="top|center_horizontal"
+        android:clickable="true"
+        android:focusable="true">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_halo_circle" />
+
+        <View
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_white_circle" />
+
+        <View
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_hold_button_glossy" />
+
+        <View
+            android:layout_width="20dp"
+            android:layout_height="11dp"
+            android:layout_gravity="center"
+            android:layout_marginEnd="22dp"
+            android:layout_marginBottom="34dp"
+            android:rotation="-28"
+            android:background="@drawable/bg_specular_highlight" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="SOS"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </FrameLayout>
+
+</FrameLayout>

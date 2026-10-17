@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/light_blue"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:paddingBottom="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SECURITY DASHBOARD"
+            android:textColor="@color/ink"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Incident submissions · local staff view"
+            android:textColor="@color/muted"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal">
+            <LinearLayout style="@style/StatCard" android:layout_marginEnd="6dp">
+                <TextView android:id="@+id/tvTotal" style="@style/StatValue" android:text="0" />
+                <TextView style="@style/StatLabel" android:text="Total" />
+            </LinearLayout>
+            <LinearLayout style="@style/StatCard" android:layout_marginHorizontal="3dp">
+                <TextView android:id="@+id/tvReceived" style="@style/StatValue" android:text="0" />
+                <TextView style="@style/StatLabel" android:text="Received" />
+            </LinearLayout>
+            <LinearLayout style="@style/StatCard" android:layout_marginHorizontal="3dp">
+                <TextView android:id="@+id/tvReview" style="@style/StatValue" android:text="0" />
+                <TextView style="@style/StatLabel" android:text="Review" />
+            </LinearLayout>
+            <LinearLayout style="@style/StatCard" android:layout_marginStart="6dp">
+                <TextView android:id="@+id/tvResolved" style="@style/StatValue" android:text="0" />
+                <TextView style="@style/StatLabel" android:text="Resolved" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:fillViewport="false"
+            android:scrollbars="none">
+            <LinearLayout
+                android:id="@+id/filterRow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <LinearLayout
+            android:id="@+id/listContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <TextView
+            android:id="@+id/tvEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:padding="24dp"
+            android:text="No incident submissions on this device yet."
+            android:textColor="@color/muted"
+            android:textSize="15sp"
+            android:visibility="gone" />
+    </LinearLayout>
+</ScrollView>

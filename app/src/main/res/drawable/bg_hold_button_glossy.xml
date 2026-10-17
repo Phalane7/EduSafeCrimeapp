@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A glossy "glass sphere" look using a single native Android radial
+  gradient — no custom drawing needed. The light source is offset to
+  the upper-left (centerX/centerY < 0.5) so it reads as a lit sphere
+  rather than a flat gradient fill.
+  gradientRadius uses the "%p" percentage form so this one drawable
+  works at any size (the big Hold button and the small nav FAB alike).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <gradient
+        android:type="radial"
+        android:gradientRadius="75%p"
+        android:centerX="0.32"
+        android:centerY="0.26"
+        android:startColor="#FFC2C6"
+        android:centerColor="@color/signal_red"
+        android:endColor="@color/red_dark" />
+</shape>

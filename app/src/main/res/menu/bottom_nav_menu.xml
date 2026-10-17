@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@drawable/ic_nav_home"
+        android:title="HOME" />
+    <item
+        android:id="@+id/nav_map"
+        android:icon="@drawable/ic_nav_map"
+        android:title="MAPS" />
+    <!-- empty slot: the raised SOS button sits over this gap -->
+    <item
+        android:id="@+id/nav_spacer"
+        android:title=""
+        android:enabled="false" />
+    <item
+        android:id="@+id/nav_reports"
+        android:icon="@drawable/ic_nav_reports"
+        android:title="REPORTS" />
+    <item
+        android:id="@+id/nav_profile"
+        android:icon="@drawable/ic_nav_profile"
+        android:title="PROFILE" />
+</menu>
