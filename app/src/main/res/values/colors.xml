@@ -2,7 +2,7 @@
     <!--  EduSafe brand palette  -->
     <color name="deep_navy">#02225D</color>
     <color name="signal_red">#B50218</color>
-    <color name="glass_red">#2E1A2E</color>
+    <color name="glass_red">#BCAB1023</color>
     <!--  solid fallback; real glass_red is rgba(181,2,24,0.18), used as tint below  -->
     <color name="glass_red_overlay">#2EB50218</color>
     <!--  ARGB form of rgba(181,2,24,0.18) for overlay use  -->

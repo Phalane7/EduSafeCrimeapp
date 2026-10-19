@@ -48,6 +48,7 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.material)
 
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // Existing Firebase services
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)

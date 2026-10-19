@@ -1,48 +1,199 @@
 package com.example.edusafe;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
-
-import com.google.firebase.auth.ActionCodeSettings;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
 
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.io.IOException;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class AuthRepository {
 
-    private final FirebaseAuth auth =
-            FirebaseAuth.getInstance();
+    private static final MediaType JSON =
+            MediaType.get("application/json; charset=utf-8");
 
-    private final FirebaseFirestore db =
-            FirebaseFirestore.getInstance();
+    private final OkHttpClient client = new OkHttpClient();
 
-    // ---------------------------------------------------------
-    // CLOUDFLARE WORKER
-    // ---------------------------------------------------------
+    private final Handler mainHandler =
+            new Handler(Looper.getMainLooper());
 
-    private static final String OTP_WORKER_URL =
-            "https://edusafe-otp.serokaphalane.workers.dev/";
+    private final SharedPreferences sessionPrefs;
 
-    private final ExecutorService executor =
-            Executors.newSingleThreadExecutor();
+    // Constructor
+    public AuthRepository(Context context) {
+        sessionPrefs = context.getApplicationContext()
+                .getSharedPreferences(
+                        "edusafe_supabase_session",
+                        Context.MODE_PRIVATE
+                );
+    }
 
-    // ---------------------------------------------------------
-    // SIGN UP
-    // ---------------------------------------------------------
+    // ------------------------------------------
+    // SUPABASE API REQUEST
+    // ------------------------------------------
+
+    private void request(
+            String endpoint,
+            JSONObject data,
+            AuthCallback<JSONObject> callback) {
+
+        RequestBody body = RequestBody.create(
+                data.toString(), JSON);
+
+        Request request = new Request.Builder()
+                .url(SupabaseConfig.SUPABASE_URL + endpoint)
+                .addHeader(
+                        "apikey",
+                        SupabaseConfig.SUPABASE_KEY)
+                .addHeader(
+                        "Content-Type",
+                        "application/json")
+                .post(body)
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+
+            @Override
+            public void onFailure(Call call, IOException e) {
+
+                mainHandler.post(() ->
+                        callback.onError(
+                                "Network error: " + e.getMessage()));
+            }
+
+            @Override
+            public void onResponse(
+                    Call call,
+                    Response response) throws IOException {
+
+                try (Response res = response) {
+
+                    String text = res.body() != null
+                            ? res.body().string()
+                            : "";
+
+                    JSONObject result;
+
+                    try {
+                        result = text.isEmpty()
+                                ? new JSONObject()
+                                : new JSONObject(text);
+                    } catch (Exception e) {
+                        mainHandler.post(() ->
+                                callback.onError(
+                                        "Invalid server response."));
+                        return;
+                    }
+
+                    if (res.isSuccessful()) {
+
+                        mainHandler.post(() ->
+                                callback.onSuccess(result));
+
+                    } else {
+
+                        String message = result.optString(
+                                "msg",
+                                result.optString(
+                                        "error_description",
+                                        result.optString(
+                                                "message",
+                                                result.optString(
+                                                        "error",
+                                                        "Request failed."
+                                                )
+                                        )
+                                )
+                        );
+
+                        mainHandler.post(() ->
+                                callback.onError(message));
+                    }
+
+                } catch (Exception e) {
+
+                    mainHandler.post(() ->
+                            callback.onError(
+                                    "Unable to process response."));
+                }
+            }
+        });
+    }
+
+    // ------------------------------------------
+    // SAVE LOGIN SESSION
+    // ------------------------------------------
+
+    private void saveSession(JSONObject result) {
+
+        String accessToken =
+                result.optString("access_token", "");
+
+        String refreshToken =
+                result.optString("refresh_token", "");
+
+        long expiresIn =
+                result.optLong("expires_in", 0);
+
+        if (accessToken.isEmpty()
+                || refreshToken.isEmpty()
+                || expiresIn <= 0) {
+
+            throw new IllegalStateException(
+                    "Supabase did not return a complete session.");
+        }
+
+        long expiresAt =
+                System.currentTimeMillis()
+                        + expiresIn * 1000L;
+
+        sessionPrefs.edit()
+                .putString("access_token", accessToken)
+                .putString("refresh_token", refreshToken)
+                .putLong("expires_at", expiresAt)
+                .apply();
+    }
+
+    // ------------------------------------------
+    // CHECK SESSION
+    // ------------------------------------------
+
+    public boolean hasValidSession() {
+
+        String accessToken =
+                sessionPrefs.getString(
+                        "access_token", "");
+
+        long expiresAt =
+                sessionPrefs.getLong(
+                        "expires_at", 0);
+
+        return accessToken != null
+                && !accessToken.isEmpty()
+                && System.currentTimeMillis() < expiresAt;
+    }
+
+    // ------------------------------------------
+    // LOG OUT / CLEAR SESSION
+    // ------------------------------------------
+
+    public void clearSession() {
+        sessionPrefs.edit().clear().apply();
+    }
+
+    // ------------------------------------------
+    // REGISTER STUDENT
+    // ------------------------------------------
 
     public void signUp(
             String firstName,
@@ -50,578 +201,310 @@ public class AuthRepository {
             String phone,
             String email,
             String password,
-            AuthCallback<Void> callback
-    ) {
-
-        email = email.trim().toLowerCase();
+            AuthCallback<Void> callback) {
 
         if (!EmailValidator.isValidVossieEmail(email)) {
 
             callback.onError(
-                    "Invalid email. Please use your @vossie.net address."
-            );
-
+                    "Please use your @vossie.net email address.");
             return;
         }
 
-        String finalEmail = email;
+        try {
 
-        auth.createUserWithEmailAndPassword(
-                        finalEmail,
-                        password
-                )
-                .addOnSuccessListener(authResult -> {
+            JSONObject data = new JSONObject();
 
-                    FirebaseUser user =
-                            authResult.getUser();
+            data.put("email", email);
+            data.put("password", password);
 
-                    if (user == null) {
+            JSONObject metadata = new JSONObject();
 
-                        callback.onError(
-                                "Account was not created. Please try again."
-                        );
+            metadata.put("first_name", firstName);
+            metadata.put("surname", surname);
+            metadata.put("phone", phone);
 
-                        return;
+            data.put("data", metadata);
+
+            request(
+                    "/auth/v1/signup",
+                    data,
+                    new AuthCallback<JSONObject>() {
+
+                        @Override
+                        public void onSuccess(JSONObject result) {
+                            callback.onSuccess(null);
+                        }
+
+                        @Override
+                        public void onError(String message) {
+                            callback.onError(message);
+                        }
                     }
-
-                    // -------------------------------------------------
-                    // IMPORTANT:
-                    // The Firebase account now exists.
-                    //
-                    // Tell SignUpActivity immediately.
-                    //
-                    // DO NOT wait for Firestore.
-                    // DO NOT wait for OTP.
-                    // -------------------------------------------------
-
-                    callback.onSuccess(null);
-
-                    // -------------------------------------------------
-                    // SAVE USER PROFILE IN THE BACKGROUND
-                    // -------------------------------------------------
-
-                    Map<String, Object> profile =
-                            new HashMap<>();
-
-                    profile.put(
-                            "firstName",
-                            firstName
-                    );
-
-                    profile.put(
-                            "surname",
-                            surname
-                    );
-
-                    profile.put(
-                            "phone",
-                            phone
-                    );
-
-                    profile.put(
-                            "email",
-                            finalEmail
-                    );
-
-                    profile.put(
-                            "verified",
-                            false
-                    );
-
-                    profile.put(
-                            "banned",
-                            false
-                    );
-
-                    db.collection("users")
-                            .document(user.getUid())
-                            .set(profile)
-                            .addOnFailureListener(e -> Log.e(
-                                    "AuthRepository",
-                                    "Could not save user profile",
-                                    e
-                            ));
-
-                })
-                .addOnFailureListener(e -> callback.onError(
-                        e.getMessage() != null
-                                ? e.getMessage()
-                                : "Could not create your account."
-                ));
-    }
-
-    // ---------------------------------------------------------
-    // SEND REGISTRATION OTP
-    // ---------------------------------------------------------
-
-    public void sendRegistrationCode(
-            String email,
-            AuthCallback<Void> callback
-    ) {
-
-        email = email.trim().toLowerCase();
-
-        if (!EmailValidator.isValidVossieEmail(email)) {
-
-            callback.onError(
-                    "Invalid email. Please use your @vossie.net address."
             );
 
-            return;
-        }
-
-        String finalEmail = email;
-
-        executor.execute(() -> {
-
-            try {
-
-                JSONObject requestBody =
-                        new JSONObject();
-
-                requestBody.put(
-                        "action",
-                        "send"
-                );
-
-                requestBody.put(
-                        "email",
-                        finalEmail
-                );
-
-                String response =
-                        sendWorkerRequest(
-                                requestBody.toString()
-                        );
-
-                JSONObject jsonResponse =
-                        new JSONObject(response);
-
-                boolean success =
-                        jsonResponse.optBoolean(
-                                "success",
-                                false
-                        );
-
-                if (success) {
-
-                    runOnMainThread(
-                            () -> callback.onSuccess(null)
-                    );
-
-                } else {
-
-                    String message =
-                            jsonResponse.optString(
-                                    "message",
-                                    "Could not send the verification code."
-                            );
-
-                    runOnMainThread(
-                            () -> callback.onError(message)
-                    );
-                }
-
-            } catch (Exception e) {
-
-                Log.e(
-                        "AuthRepository",
-                        "OTP request failed",
-                        e
-                );
-
-                runOnMainThread(
-                        () -> callback.onError(
-                                "Could not connect to the verification service."
-                        )
-                );
-            }
-        });
-    }
-
-    // ---------------------------------------------------------
-    // VERIFY REGISTRATION OTP
-    // ---------------------------------------------------------
-
-    public void verifyRegistrationCode(
-            String email,
-            String code,
-            AuthCallback<Void> callback
-    ) {
-
-        email = email.trim().toLowerCase();
-        code = code.trim();
-
-        if (!EmailValidator.isValidVossieEmail(email)) {
+        } catch (Exception e) {
 
             callback.onError(
-                    "Invalid email. Please use your @vossie.net address."
-            );
-
-            return;
+                    "Registration failed: " + e.getMessage());
         }
-
-        if (!code.matches("\\d{6}")) {
-
-            callback.onError(
-                    "Please enter the full 6-digit code."
-            );
-
-            return;
-        }
-
-        String finalEmail = email;
-        String finalCode = code;
-
-        executor.execute(() -> {
-
-            try {
-
-                JSONObject requestBody =
-                        new JSONObject();
-
-                requestBody.put(
-                        "action",
-                        "verify"
-                );
-
-                requestBody.put(
-                        "email",
-                        finalEmail
-                );
-
-                requestBody.put(
-                        "code",
-                        finalCode
-                );
-
-                String response =
-                        sendWorkerRequest(
-                                requestBody.toString()
-                        );
-
-                JSONObject jsonResponse =
-                        new JSONObject(response);
-
-                boolean success =
-                        jsonResponse.optBoolean(
-                                "success",
-                                false
-                        );
-
-                if (!success) {
-
-                    String message =
-                            jsonResponse.optString(
-                                    "message",
-                                    "Verification failed."
-                            );
-
-                    runOnMainThread(
-                            () -> callback.onError(message)
-                    );
-
-                    return;
-                }
-
-                // -------------------------------------------------
-                // OTP IS CORRECT
-                // -------------------------------------------------
-
-                FirebaseUser user =
-                        auth.getCurrentUser();
-
-                if (user == null) {
-
-                    runOnMainThread(
-                            () -> callback.onError(
-                                    "Could not find your account. Please log in again."
-                            )
-                    );
-
-                    return;
-                }
-
-                String uid =
-                        user.getUid();
-
-                db.collection("users")
-                        .document(uid)
-                        .update(
-                                "verified",
-                                true
-                        )
-                        .addOnSuccessListener(unused ->
-                                callback.onSuccess(null)
-                        )
-                        .addOnFailureListener(e ->
-                                callback.onError(
-                                        "Your email was verified, but we could not update your profile."
-                                )
-                        );
-
-            } catch (Exception e) {
-
-                Log.e(
-                        "AuthRepository",
-                        "OTP verification failed",
-                        e
-                );
-
-                runOnMainThread(
-                        () -> callback.onError(
-                                "Could not connect to the verification service."
-                        )
-                );
-            }
-        });
     }
 
-    // ---------------------------------------------------------
-    // LOG IN
-    // ---------------------------------------------------------
+    // ------------------------------------------
+    // LOGIN STUDENT
+    // ------------------------------------------
 
     public void logIn(
             String email,
             String password,
-            AuthCallback<Void> callback
-    ) {
-
-        email = email.trim().toLowerCase();
+            AuthCallback<Void> callback) {
 
         if (!EmailValidator.isValidVossieEmail(email)) {
 
             callback.onError(
-                    "Invalid email. Please use your @vossie.net address."
-            );
-
+                    "Please use your @vossie.net email address.");
             return;
         }
 
-        String finalEmail = email;
+        try {
 
-        auth.signInWithEmailAndPassword(
-                        finalEmail,
-                        password
-                )
-                .addOnSuccessListener(authResult -> {
+            JSONObject data = new JSONObject();
 
-                    FirebaseUser user =
-                            authResult.getUser();
+            data.put("email", email);
+            data.put("password", password);
 
-                    if (user == null) {
+            request(
+                    "/auth/v1/token?grant_type=password",
+                    data,
+                    new AuthCallback<JSONObject>() {
 
-                        callback.onError(
-                                "Could not log in. Please try again."
-                        );
+                        @Override
+                        public void onSuccess(JSONObject result) {
 
-                        return;
-                    }
+                            try {
 
-                    db.collection("users")
-                            .document(user.getUid())
-                            .get()
-                            .addOnSuccessListener(document -> {
-
-                                if (!document.exists()) {
-
-                                    auth.signOut();
-
-                                    callback.onError(
-                                            "Your account profile could not be found."
-                                    );
-
-                                    return;
-                                }
-
-                                Boolean verified =
-                                        document.getBoolean(
-                                                "verified"
-                                        );
-
-                                if (verified == null
-                                        || !verified) {
-
-                                    auth.signOut();
-
-                                    callback.onError(
-                                            "Please verify your email with the 6-digit code before logging in."
-                                    );
-
-                                    return;
-                                }
+                                saveSession(result);
 
                                 callback.onSuccess(null);
-                            })
-                            .addOnFailureListener(e -> {
 
-                                auth.signOut();
+                            } catch (Exception e) {
 
                                 callback.onError(
-                                        "Could not check your verification status."
-                                );
-                            });
+                                        "Unable to save login session.");
+                            }
+                        }
 
-                })
-                .addOnFailureListener(e -> callback.onError(
-                        e.getMessage() != null
-                                ? e.getMessage()
-                                : "Login failed. Please try again."
-                ));
+                        @Override
+                        public void onError(String message) {
+
+                            callback.onError(message);
+                        }
+                    }
+            );
+
+        } catch (Exception e) {
+
+            callback.onError(
+                    "Login failed: " + e.getMessage());
+        }
     }
 
-    // ---------------------------------------------------------
-    // FORGOT PASSWORD
-    // ---------------------------------------------------------
+    // ------------------------------------------
+    // VERIFY REGISTRATION OTP
+    // ------------------------------------------
 
-    public void sendPasswordResetLink(
+    public void verifySignUpCode(
             String email,
-            AuthCallback<Void> callback
-    ) {
+            String code,
+            AuthCallback<Void> callback) {
 
-        email = email.trim().toLowerCase();
+        try {
+
+            JSONObject data = new JSONObject();
+
+            data.put("email", email);
+            data.put("token", code);
+            data.put("type", "signup");
+
+            request(
+                    "/auth/v1/verify",
+                    data,
+                    new AuthCallback<JSONObject>() {
+
+                        @Override
+                        public void onSuccess(JSONObject result) {
+
+                            // Registration verified.
+                            // Student will log in separately.
+                            callback.onSuccess(null);
+                        }
+
+                        @Override
+                        public void onError(String message) {
+
+                            callback.onError(message);
+                        }
+                    }
+            );
+
+        } catch (Exception e) {
+
+            callback.onError(
+                    "Verification failed: " + e.getMessage());
+        }
+    }
+
+    // ------------------------------------------
+    // RESEND REGISTRATION OTP
+    // ------------------------------------------
+
+    public void resendSignUpCode(
+            String email,
+            AuthCallback<Void> callback) {
+
+        try {
+
+            JSONObject data = new JSONObject();
+
+            data.put("email", email);
+            data.put("type", "signup");
+
+            request(
+                    "/auth/v1/resend",
+                    data,
+                    new AuthCallback<JSONObject>() {
+
+                        @Override
+                        public void onSuccess(JSONObject result) {
+
+                            callback.onSuccess(null);
+                        }
+
+                        @Override
+                        public void onError(String message) {
+
+                            callback.onError(message);
+                        }
+                    }
+            );
+
+        } catch (Exception e) {
+
+            callback.onError(
+                    "Could not resend code: " + e.getMessage());
+        }
+    }
+
+    // ------------------------------------------
+    // SEND PASSWORD RESET OTP
+    // ------------------------------------------
+
+    public void sendPasswordResetCode(
+            String email,
+            AuthCallback<Void> callback) {
 
         if (!EmailValidator.isValidVossieEmail(email)) {
 
             callback.onError(
-                    "Invalid email. Please use your @vossie.net address."
-            );
-
+                    "Please use your @vossie.net email address.");
             return;
         }
 
-        ActionCodeSettings actionCodeSettings =
-                ActionCodeSettings.newBuilder()
-                        .setUrl(
-                                "https://group526.web.app/resetPassword.html"
-                        )
-                        .setHandleCodeInApp(true)
-                        .setAndroidPackageName(
-                                "com.example.edusafe",
-                                true,
-                                null
-                        )
-                        .build();
+        try {
 
-        auth.sendPasswordResetEmail(
-                        email,
-                        actionCodeSettings
-                )
-                .addOnSuccessListener(unused ->
-                        callback.onSuccess(null)
-                )
-                .addOnFailureListener(e ->
-                        callback.onError(
-                                e.getMessage() != null
-                                        ? e.getMessage()
-                                        : "Could not send the password reset email."
-                        )
-                );
+            JSONObject data = new JSONObject();
+
+            data.put("email", email);
+
+            request(
+                    "/auth/v1/recover",
+                    data,
+                    new AuthCallback<JSONObject>() {
+
+                        @Override
+                        public void onSuccess(JSONObject result) {
+
+                            callback.onSuccess(null);
+                        }
+
+                        @Override
+                        public void onError(String message) {
+
+                            callback.onError(message);
+                        }
+                    }
+            );
+
+        } catch (Exception e) {
+
+            callback.onError(
+                    "Password reset request failed: "
+                            + e.getMessage());
+        }
     }
 
-    // ---------------------------------------------------------
-    // SEND REQUEST TO CLOUDFLARE
-    // ---------------------------------------------------------
+    // ------------------------------------------
+    // VERIFY PASSWORD RESET OTP
+    // ------------------------------------------
 
-    private String sendWorkerRequest(
-            String requestBody
-    ) throws Exception {
+    public void verifyPasswordResetCode(
+            String email,
+            String code,
+            AuthCallback<Void> callback) {
 
-        URL url =
-                new URL(OTP_WORKER_URL);
+        try {
 
-        HttpURLConnection connection =
-                (HttpURLConnection)
-                        url.openConnection();
+            JSONObject data = new JSONObject();
 
-        connection.setRequestMethod(
-                "POST"
-        );
+            data.put("email", email);
+            data.put("token", code);
+            data.put("type", "recovery");
 
-        connection.setRequestProperty(
-                "Content-Type",
-                "application/json"
-        );
+            request(
+                    "/auth/v1/verify",
+                    data,
+                    new AuthCallback<JSONObject>() {
 
-        connection.setRequestProperty(
-                "Accept",
-                "application/json"
-        );
+                        @Override
+                        public void onSuccess(JSONObject result) {
 
-        connection.setConnectTimeout(
-                15000
-        );
+                            // A successful response contains a
+                            // recovery session. The next step
+                            // will securely handle that session.
+                            callback.onSuccess(null);
+                        }
 
-        connection.setReadTimeout(
-                15000
-        );
+                        @Override
+                        public void onError(String message) {
 
-        connection.setDoOutput(true);
+                            callback.onError(message);
+                        }
+                    }
+            );
 
-        byte[] body =
-                requestBody.getBytes(
-                        StandardCharsets.UTF_8
-                );
+        } catch (Exception e) {
 
-        try (OutputStream outputStream =
-                     connection.getOutputStream()) {
-
-            outputStream.write(body);
+            callback.onError(
+                    "Password reset verification failed: "
+                            + e.getMessage());
         }
-
-        int responseCode =
-                connection.getResponseCode();
-
-        BufferedReader reader;
-
-        if (responseCode >= 200
-                && responseCode < 300) {
-
-            reader =
-                    new BufferedReader(
-                            new InputStreamReader(
-                                    connection.getInputStream(),
-                                    StandardCharsets.UTF_8
-                            )
-                    );
-
-        } else {
-
-            reader =
-                    new BufferedReader(
-                            new InputStreamReader(
-                                    connection.getErrorStream(),
-                                    StandardCharsets.UTF_8
-                            )
-                    );
-        }
-
-        StringBuilder response =
-                new StringBuilder();
-
-        String line;
-
-        while ((line = reader.readLine()) != null) {
-            response.append(line);
-        }
-
-        reader.close();
-
-        connection.disconnect();
-
-        return response.toString();
     }
 
-    // ---------------------------------------------------------
-    // MAIN THREAD
-    // ---------------------------------------------------------
+    // ------------------------------------------
+    // UPDATE PASSWORD - NOT YET IMPLEMENTED
+    // ------------------------------------------
 
-    private void runOnMainThread(
-            Runnable action
-    ) {
+    public void resetPasswordWithCode(
+            String email,
+            String code,
+            String newPassword,
+            AuthCallback<Void> callback) {
 
-        new Handler(
-                Looper.getMainLooper()
-        ).post(action);
+        // Supabase requires an authenticated recovery
+        // session to update the user's password.
+        // We will implement this securely in the
+        // password-reset migration step.
+
+        callback.onError(
+                "Password reset setup is not complete yet.");
     }
 }

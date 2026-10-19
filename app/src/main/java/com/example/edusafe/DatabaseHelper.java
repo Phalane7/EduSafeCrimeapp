@@ -16,10 +16,17 @@ import java.util.Random;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "EduSafe";
+
     private static final String DB_NAME = "edusafe.db";
+
+    // Keep the existing database version to preserve saved data.
     private static final int DB_VERSION = 3;
 
+    // 1 Campus Security + 4 personal contacts.
     public static final int MAX_CONTACTS = 5;
+
+    private static final String SECURITY_NAME = "Campus Security";
+    private static final String SECURITY_PHONE = "0111112222";
 
     private static DatabaseHelper instance;
 
@@ -36,7 +43,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         super(context, DB_NAME, null, DB_VERSION);
     }
 
+    // ============================================================
     // DATA MODELS
+    // ============================================================
 
     public static class Incident {
         public long id;
@@ -60,7 +69,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         public boolean locked;
     }
 
-    // CREATE EMPTY DATABASE TABLES
+    // ============================================================
+    // DATABASE CREATION
+    // ============================================================
 
     @Override
     public void onCreate(SQLiteDatabase db) {
@@ -102,19 +113,31 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         "locked INTEGER NOT NULL DEFAULT 0)"
         );
 
-        Log.d(TAG, "Empty database created");
+        // Create the permanent Campus Security contact.
+        ContentValues security = new ContentValues();
+
+        security.put("name", SECURITY_NAME);
+        security.put("phone", SECURITY_PHONE);
+        security.put("relationship", "Campus Security");
+        security.put("priority", 1);
+        security.put("locked", 1);
+
+        db.insert("contacts", null, security);
+
+        Log.d(TAG, "Database created with Campus Security");
     }
 
+    // ============================================================
     // DATABASE UPGRADES
+    // ============================================================
 
     @Override
-    public void onUpgrade(SQLiteDatabase db,
-                          int oldVersion,
-                          int newVersion) {
+    public void onUpgrade(
+            SQLiteDatabase db,
+            int oldVersion,
+            int newVersion) {
 
         if (oldVersion < 2) {
-            // Preserve existing records.
-            // Remove the old fake security number if present.
             db.execSQL(
                     "UPDATE contacts SET phone='' " +
                             "WHERE locked=1 AND phone='0111112222'"
@@ -122,12 +145,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
 
         if (oldVersion < 3) {
-            // No schema changes required.
-            // Existing user records are preserved.
+            // Existing records are preserved.
         }
     }
 
+    // ============================================================
     // INCIDENTS
+    // ============================================================
 
     public List<Incident> getIncidents(
             String status,
@@ -149,10 +173,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         if (sinceDays > 0) {
             conditions.add("created_at>=?");
-            arguments.add(String.valueOf(
-                    System.currentTimeMillis()
-                            - sinceDays * 86400000L
-            ));
+            arguments.add(
+                    String.valueOf(
+                            System.currentTimeMillis()
+                                    - sinceDays * 86400000L
+                    )
+            );
         }
 
         String selection = conditions.isEmpty()
@@ -213,7 +239,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return incidents;
     }
 
+    // ============================================================
     // REPORT TRACKING CODE
+    // ============================================================
 
     private String makeCode() {
 
@@ -225,15 +253,19 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         StringBuilder code = new StringBuilder("ES-");
 
         for (int i = 0; i < 6; i++) {
-            code.append(characters.charAt(
-                    random.nextInt(characters.length())
-            ));
+            code.append(
+                    characters.charAt(
+                            random.nextInt(characters.length())
+                    )
+            );
         }
 
         return code.toString();
     }
 
+    // ============================================================
     // CREATE REPORT
+    // ============================================================
 
     public Report createReport(
             String type,
@@ -259,7 +291,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put("created_at", System.currentTimeMillis());
 
         long id = getWritableDatabase().insert(
-                "reports", null, values
+                "reports",
+                null,
+                values
         );
 
         if (id == -1) {
@@ -269,7 +303,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return getReport(id);
     }
 
+    // ============================================================
     // GET SINGLE REPORT
+    // ============================================================
 
     public Report getReport(long id) {
 
@@ -291,7 +327,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return null;
     }
 
+    // ============================================================
     // GET REPORTS
+    // ============================================================
 
     public List<Report> getReports(String type) {
 
@@ -320,7 +358,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return reports;
     }
 
+    // ============================================================
     // UPDATE REPORT STATUS
+    // ============================================================
 
     public boolean updateReportStatus(
             long id,
@@ -343,7 +383,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         ) > 0;
     }
 
+    // ============================================================
     // PENDING REPORTS
+    // ============================================================
 
     public List<Report> getPendingReports() {
 
@@ -362,13 +404,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             while (cursor.moveToNext()) {
                 reports.add(readReport(cursor));
             }
-
         }
 
         return reports;
     }
 
+    // ============================================================
     // EDIT PENDING REPORT
+    // ============================================================
 
     public boolean updateReport(
             long id,
@@ -388,7 +431,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         ) > 0;
     }
 
+    // ============================================================
     // DELETE PENDING REPORT
+    // ============================================================
 
     public boolean deleteReport(long id) {
 
@@ -399,7 +444,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         ) > 0;
     }
 
+    // ============================================================
     // MARK REPORT AS SYNCED
+    // ============================================================
 
     public void markReportSynced(long id) {
 
@@ -415,7 +462,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         );
     }
 
+    // ============================================================
     // READ REPORT
+    // ============================================================
 
     private Report readReport(Cursor cursor) {
 
@@ -436,14 +485,19 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         report.location = cursor.getString(
                 cursor.getColumnIndexOrThrow("location"));
 
-        int latIndex = cursor.getColumnIndexOrThrow("latitude");
-        int lngIndex = cursor.getColumnIndexOrThrow("longitude");
+        int latIndex =
+                cursor.getColumnIndexOrThrow("latitude");
+
+        int lngIndex =
+                cursor.getColumnIndexOrThrow("longitude");
 
         report.latitude = cursor.isNull(latIndex)
-                ? null : cursor.getDouble(latIndex);
+                ? null
+                : cursor.getDouble(latIndex);
 
         report.longitude = cursor.isNull(lngIndex)
-                ? null : cursor.getDouble(lngIndex);
+                ? null
+                : cursor.getDouble(lngIndex);
 
         report.photoUri = cursor.getString(
                 cursor.getColumnIndexOrThrow("photo_uri"));
@@ -460,9 +514,129 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return report;
     }
 
+    // ============================================================
     // TRUSTED CONTACTS
+    // ============================================================
+
+    // Ensures Campus Security always exists at Priority 1.
+    // Preserves personal contacts already saved in the database.
+    private void ensureCampusSecurity() {
+
+        SQLiteDatabase database = getWritableDatabase();
+
+        database.beginTransaction();
+
+        try {
+            long securityId = -1;
+
+            // Find existing Campus Security contact.
+            try (Cursor cursor = database.query(
+                    "contacts",
+                    new String[]{"id", "name", "locked"},
+                    null,
+                    null,
+                    null,
+                    null,
+                    "id ASC"
+            )) {
+
+                while (cursor.moveToNext()) {
+
+                    long id = cursor.getLong(0);
+                    String name = cursor.getString(1);
+                    boolean locked = cursor.getInt(2) == 1;
+
+                    if (locked ||
+                            SECURITY_NAME.equalsIgnoreCase(name)) {
+
+                        if (securityId == -1) {
+                            securityId = id;
+                        }
+                    }
+                }
+            }
+
+            ContentValues security = new ContentValues();
+
+            security.put("name", SECURITY_NAME);
+            security.put("phone", SECURITY_PHONE);
+            security.put("relationship", "Campus Security");
+            security.put("priority", 1);
+            security.put("locked", 1);
+
+            if (securityId == -1) {
+
+                securityId = database.insertOrThrow(
+                        "contacts",
+                        null,
+                        security
+                );
+
+            } else {
+
+                database.update(
+                        "contacts",
+                        security,
+                        "id=?",
+                        new String[]{String.valueOf(securityId)}
+                );
+            }
+
+            // Remove duplicate Campus Security records only.
+            database.delete(
+                    "contacts",
+                    "id<>? AND (locked=1 OR name=?)",
+                    new String[]{
+                            String.valueOf(securityId),
+                            SECURITY_NAME
+                    }
+            );
+
+            // Renumber personal contacts from Priority 2.
+            int priority = 2;
+
+            try (Cursor cursor = database.query(
+                    "contacts",
+                    new String[]{"id"},
+                    "id<>?",
+                    new String[]{String.valueOf(securityId)},
+                    null,
+                    null,
+                    "priority ASC, id ASC"
+            )) {
+
+                while (cursor.moveToNext()) {
+
+                    ContentValues values = new ContentValues();
+
+                    values.put("priority", priority++);
+                    values.put("locked", 0);
+
+                    database.update(
+                            "contacts",
+                            values,
+                            "id=?",
+                            new String[]{
+                                    String.valueOf(cursor.getLong(0))
+                            }
+                    );
+                }
+            }
+
+            database.setTransactionSuccessful();
+
+        } finally {
+            database.endTransaction();
+        }
+    }
+
+    // ============================================================
+    // GET CONTACTS
+    // ============================================================
 
     public List<Contact> getContacts() {
+
+        ensureCampusSecurity();
 
         List<Contact> contacts = new ArrayList<>();
 
@@ -473,7 +647,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 null,
                 null,
                 null,
-                "priority ASC"
+                "priority ASC, id ASC"
         )) {
 
             while (cursor.moveToNext()) {
@@ -508,33 +682,44 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return contacts;
     }
 
+    // ============================================================
     // ADD CONTACT
+    // ============================================================
 
     public boolean addContact(
             String name,
             String phone,
             String relationship) {
 
-        int count = getContacts().size();
+        List<Contact> contacts = getContacts();
 
-        if (count >= MAX_CONTACTS) {
+        if (contacts.size() >= MAX_CONTACTS) {
+            return false;
+        }
+
+        if (name == null || name.trim().isEmpty()
+                || SECURITY_NAME.equalsIgnoreCase(name.trim())) {
             return false;
         }
 
         ContentValues values = new ContentValues();
 
-        values.put("name", name);
+        values.put("name", name.trim());
         values.put("phone", phone);
         values.put("relationship", relationship);
-        values.put("priority", count + 1);
+        values.put("priority", contacts.size() + 1);
         values.put("locked", 0);
 
         return getWritableDatabase().insert(
-                "contacts", null, values
+                "contacts",
+                null,
+                values
         ) != -1;
     }
 
+    // ============================================================
     // UPDATE CONTACT
+    // ============================================================
 
     public void updateContact(
             long id,
@@ -542,9 +727,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             String phone,
             String relationship) {
 
+        if (name == null || name.trim().isEmpty()
+                || SECURITY_NAME.equalsIgnoreCase(name.trim())) {
+            return;
+        }
+
         ContentValues values = new ContentValues();
 
-        values.put("name", name);
+        values.put("name", name.trim());
         values.put("phone", phone);
         values.put("relationship", relationship);
 
@@ -556,7 +746,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         );
     }
 
+    // ============================================================
     // DELETE CONTACT
+    // ============================================================
 
     public void deleteContact(long id) {
 
@@ -566,18 +758,26 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 new String[]{String.valueOf(id)}
         );
 
-        renumber(getContacts());
+        // Recalculate priorities after deletion.
+        getContacts();
     }
 
+    // ============================================================
     // MOVE CONTACT PRIORITY
+    // ============================================================
 
     public void moveContact(long id, int direction) {
+
+        if (direction != -1 && direction != 1) {
+            return;
+        }
 
         List<Contact> contacts = getContacts();
 
         int currentIndex = -1;
 
         for (int i = 0; i < contacts.size(); i++) {
+
             if (contacts.get(i).id == id) {
                 currentIndex = i;
                 break;
@@ -606,26 +806,44 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         renumber(contacts);
     }
 
-    // UPDATE CONTACT PRIORITIES
+    // ============================================================
+    // RENUMBER CONTACT PRIORITIES
+    // ============================================================
 
     private void renumber(List<Contact> contacts) {
 
         SQLiteDatabase database = getWritableDatabase();
 
-        for (int i = 0; i < contacts.size(); i++) {
+        database.beginTransaction();
 
-            ContentValues values = new ContentValues();
+        try {
+            int personalPriority = 2;
 
-            values.put("priority", i + 1);
+            for (Contact contact : contacts) {
 
-            database.update(
-                    "contacts",
-                    values,
-                    "id=?",
-                    new String[]{
-                            String.valueOf(contacts.get(i).id)
-                    }
-            );
+                ContentValues values = new ContentValues();
+
+                if (contact.locked) {
+                    values.put("priority", 1);
+                } else {
+                    values.put("priority", personalPriority++);
+                }
+
+                database.update(
+                        "contacts",
+                        values,
+                        "id=?",
+                        new String[]{
+                                String.valueOf(contact.id)
+                        }
+                );
+            }
+
+            database.setTransactionSuccessful();
+
+        } finally {
+            database.endTransaction();
         }
     }
 }
+

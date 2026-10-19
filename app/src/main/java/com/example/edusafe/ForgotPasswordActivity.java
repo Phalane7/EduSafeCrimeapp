@@ -12,81 +12,48 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class ForgotPasswordActivity extends AppCompatActivity {
 
-    public static final String EXTRA_EMAIL =
-            "extra_email";
+    public static final String EXTRA_EMAIL = "extra_email";
 
     private EditText etEmail;
-
     private TextView tvEmailError;
-
     private Button btnNext;
 
-    private final AuthRepository authRepository =
-            new AuthRepository();
+    private AuthRepository authRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
 
-        setContentView(
-                R.layout.activity_forgot_password
-        );
+        authRepository = new AuthRepository(this);
 
-        etEmail =
-                findViewById(R.id.etEmail);
+        setContentView(R.layout.activity_forgot_password);
 
-        tvEmailError =
-                findViewById(R.id.tvEmailError);
+        etEmail = findViewById(R.id.etEmail);
+        tvEmailError = findViewById(R.id.tvEmailError);
+        btnNext = findViewById(R.id.btnNext);
 
         TextView tvBackToLogin =
                 findViewById(R.id.tvBackToLogin);
 
-        btnNext =
-                findViewById(R.id.btnNext);
-
-        // -------------------------------------------------
-        // Send password reset link
-        // -------------------------------------------------
-
-        btnNext.setOnClickListener(
-                v -> attemptSendResetLink()
-        );
-
-        // -------------------------------------------------
-        // Back to login
-        // -------------------------------------------------
+        btnNext.setOnClickListener(v -> attemptSendCode());
 
         tvBackToLogin.setOnClickListener(v -> {
-
-            startActivity(
-                    new Intent(
-                            ForgotPasswordActivity.this,
-                            LoginActivity.class
-                    )
-            );
-
+            startActivity(new Intent(
+                    ForgotPasswordActivity.this,
+                    LoginActivity.class
+            ));
             finish();
         });
     }
 
-    private void attemptSendResetLink() {
+    private void attemptSendCode() {
 
-        String email =
-                etEmail.getText()
-                        .toString()
-                        .trim()
-                        .toLowerCase();
-
-        // -------------------------------------------------
-        // Check email
-        // -------------------------------------------------
+        String email = etEmail.getText()
+                .toString().trim();
 
         if (!EmailValidator.isValidVossieEmail(email)) {
 
-            tvEmailError.setVisibility(
-                    View.VISIBLE
-            );
+            tvEmailError.setVisibility(View.VISIBLE);
 
             etEmail.setBackgroundResource(
                     R.drawable.bg_edittext_error
@@ -95,9 +62,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
             return;
         }
 
-        tvEmailError.setVisibility(
-                View.GONE
-        );
+        tvEmailError.setVisibility(View.GONE);
 
         etEmail.setBackgroundResource(
                 R.drawable.bg_edittext
@@ -105,13 +70,9 @@ public class ForgotPasswordActivity extends AppCompatActivity {
 
         btnNext.setEnabled(false);
 
-        // -------------------------------------------------
-        // Firebase sends RESET LINK
-        // -------------------------------------------------
-
-        authRepository.sendPasswordResetLink(
+        authRepository.sendPasswordResetCode(
                 email,
-                new AuthCallback<>() {
+                new AuthCallback<Void>() {
 
                     @Override
                     public void onSuccess(Void result) {
@@ -120,9 +81,23 @@ public class ForgotPasswordActivity extends AppCompatActivity {
 
                         Toast.makeText(
                                 ForgotPasswordActivity.this,
-                                "Password reset link sent. Please check your email.",
+                                "If the account exists, check your email for a recovery code.",
                                 Toast.LENGTH_LONG
                         ).show();
+
+                        Intent intent = new Intent(
+                                ForgotPasswordActivity.this,
+                                VerifyEmailActivity.class
+                        );
+
+                        intent.putExtra(EXTRA_EMAIL, email);
+
+                        intent.putExtra(
+                                VerifyEmailActivity.EXTRA_MODE,
+                                VerifyEmailActivity.MODE_RECOVERY
+                        );
+
+                        startActivity(intent);
                     }
 
                     @Override

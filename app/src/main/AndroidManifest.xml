@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Internet permission for Firebase and maps -->
+    <!-- Internet access for Supabase, Firebase and maps -->
     <uses-permission
         android:name="android.permission.INTERNET" />
 
@@ -20,11 +21,7 @@
     <uses-permission
         android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!--
-        Telephony is optional.
-        This allows EduSafe to run on devices without
-        telephone hardware, such as some tablets.
-    -->
+    <!-- Allow EduSafe on devices without telephone hardware -->
     <uses-feature
         android:name="android.hardware.telephony"
         android:required="false" />
@@ -39,88 +36,92 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.EduSafe">
 
-        <!-- Main Activity: Bottom Navigation -->
+        <!-- SPLASH SCREEN - APP STARTS HERE -->
         <activity
-            android:name=".MainActivity"
+            android:name=".SplashActivity"
             android:exported="true"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+            android:theme="@style/Theme.EduSafe.Splash">
 
             <intent-filter>
+
                 <action
                     android:name="android.intent.action.MAIN" />
 
                 <category
                     android:name="android.intent.category.LAUNCHER" />
+
             </intent-filter>
 
         </activity>
 
-        <!-- SOS Active Screen -->
+        <!-- MAIN STUDENT DASHBOARD -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+        <!-- SOS ACTIVE SCREEN -->
         <activity
             android:name=".ui.sos.SosActiveActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
-        <!-- Emergency SOS Activity -->
+        <!-- EMERGENCY SOS SCREEN -->
         <activity
             android:name=".ui.sos.EmergencySosActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
-        <!-- Crime Map Activity -->
+        <!-- CRIME MAP SCREEN -->
         <activity
             android:name=".ui.map.CrimeMapActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
-        <!-- Splash Screen -->
-        <activity
-            android:name=".SplashActivity"
-            android:exported="false"
-            android:theme="@style/Theme.EduSafe.Splash" />
-
-        <!-- Get Started Screen -->
+        <!-- GET STARTED SCREEN -->
         <activity
             android:name=".GetStartedActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
-        <!-- Login Screen -->
+        <!-- LOGIN SCREEN -->
         <activity
             android:name=".LoginActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:windowSoftInputMode="adjustResize" />
 
-        <!-- Registration Screen -->
+        <!-- STUDENT REGISTRATION SCREEN -->
         <activity
             android:name=".SignUpActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:windowSoftInputMode="adjustResize" />
 
-        <!-- Forgot Password Screen -->
+        <!-- FORGOT PASSWORD SCREEN -->
         <activity
             android:name=".ForgotPasswordActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:windowSoftInputMode="adjustResize" />
 
-        <!-- Email OTP Verification Screen -->
+        <!-- SIX-DIGIT EMAIL OTP VERIFICATION SCREEN -->
         <activity
             android:name=".VerifyEmailActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:windowSoftInputMode="adjustResize" />
 
-        <!-- Create New Password Screen -->
+        <!-- CREATE NEW PASSWORD SCREEN -->
         <activity
             android:name=".CreateNewPasswordActivity"
             android:exported="true"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:windowSoftInputMode="adjustResize">
 
+            <!-- Existing password reset deep link -->
             <intent-filter>
+
                 <action
                     android:name="android.intent.action.VIEW" />
 

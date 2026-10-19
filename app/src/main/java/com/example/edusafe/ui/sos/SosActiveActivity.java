@@ -2,6 +2,7 @@ package com.example.edusafe.ui.sos;
 
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -16,8 +17,8 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.edusafe.DatabaseHelper;
 import com.example.edusafe.R;
-import com.example.edusafe.data.ContactsRepository;
 import com.example.edusafe.data.EmergencyContact;
 import com.example.edusafe.data.SosAlertSender;
 import com.example.edusafe.ui.common.SystemBars;
@@ -26,46 +27,34 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * SosActiveActivity  (screen 2 of 3: SOS Active)
- * ----------------------------------------------------------------------
- * Opens the instant the 4-second hold completes. It does NOT wait for
- * anything:
- *
- *   1. the page, a card for every contact and the location card appear
- *      straight away, each in a "sending" state,
- *   2. the elapsed-time counter starts,
- *   3. the alert is sent in the background (SosAlertSender); when it
- *      finishes, each card shows "Alert sent" with a green tick (or a red
- *      warning if that contact couldn't be texted), and the location card
- *      says whether the location went out.
- *
- * "Call Campus Security" always works, whatever happened with the texts.
- * ----------------------------------------------------------------------
- */
 public class SosActiveActivity extends AppCompatActivity {
 
-    /** Opens the phone's dialer with this number ready to call. */
     private static final String CAMPUS_SECURITY_NUMBER = "0111112222";
-
-    /** Shown on the location card. Replace with a real place name (reverse geocoding) when the group wants one. */
-    private static final String LOCATION_LABEL = "Eduvos Midrand Campus";
 
     private static final int GREEN = Color.parseColor("#1F8A4C");
     private static final int RED = Color.parseColor("#B50218");
     private static final int GREY = Color.parseColor("#6B6B6B");
 
     private final Handler handler = new Handler(Looper.getMainLooper());
+
     private int elapsedSeconds = 0;
+
     private TextView timerText;
+    private TextView statusTitle;
     private TextView statusSubtitle;
+    private TextView locationTitle;
+    private TextView locationSubtitle;
 
-    private final List<EmergencyContact> contacts = new ArrayList<>();
-    private final List<ImageView> statusIcons = new ArrayList<>();
-    private final List<TextView> statusLabels = new ArrayList<>();
-
-    private TextView locationTitle, locationSubtitle;
     private ImageView locationStatus;
+
+    private final List<DatabaseHelper.Contact> contacts =
+            new ArrayList<>();
+
+    private final List<ImageView> statusIcons =
+            new ArrayList<>();
+
+    private final List<TextView> statusLabels =
+            new ArrayList<>();
 
     private final Runnable timerTick = new Runnable() {
         @Override
@@ -79,202 +68,497 @@ public class SosActiveActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_sos_active);
-        SystemBars.applyPadded(this, findViewById(R.id.rootLayout), false);
+
+        SystemBars.applyPadded(
+                this,
+                findViewById(R.id.rootLayout),
+                false
+        );
 
         timerText = findViewById(R.id.timerText);
+        statusTitle = findViewById(R.id.statusTitle);
         statusSubtitle = findViewById(R.id.statusSubtitle);
         locationTitle = findViewById(R.id.locationTitle);
         locationSubtitle = findViewById(R.id.locationSubtitle);
         locationStatus = findViewById(R.id.locationStatus);
 
+        statusTitle.setText("SOS activated");
+        statusSubtitle.setText("Preparing emergency alerts...");
+
         updateTimerText();
         handler.postDelayed(timerTick, 1000);
+
         pulseTheLiveDot();
 
+        loadSavedContacts();
         showContacts();
+
         markLocationSending();
         setUpButtons();
+
         sendAlert();
     }
 
-    /** A soft blink on the dot next to "SOS ACTIVE", so it's clear the alert is live. */
-    private void pulseTheLiveDot() {
-        AlphaAnimation pulse = new AlphaAnimation(1f, 0.2f);
-        pulse.setDuration(700);
-        pulse.setRepeatMode(Animation.REVERSE);
-        pulse.setRepeatCount(Animation.INFINITE);
-        findViewById(R.id.liveDot).startAnimation(pulse);
+    // ====================================================
+    // LOAD SAVED CONTACTS
+    // ====================================================
+
+    private void loadSavedContacts() {
+
+        contacts.clear();
+
+        try {
+            DatabaseHelper db = DatabaseHelper.get(this);
+            contacts.addAll(db.getContacts());
+
+        } catch (Exception e) {
+            statusSubtitle.setText(
+                    "Couldn't load saved emergency contacts."
+            );
+        }
     }
 
-    // ---------------------------------------------------------------
-    // Timer
-    // ---------------------------------------------------------------
-
-    private void updateTimerText() {
-        int minutes = elapsedSeconds / 60;
-        int seconds = elapsedSeconds % 60;
-        timerText.setText(String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds));
-    }
-
-    // ---------------------------------------------------------------
-    // Contact cards
-    // ---------------------------------------------------------------
+    // ====================================================
+    // DISPLAY CONTACTS
+    // ====================================================
 
     private void showContacts() {
-        LinearLayout container = findViewById(R.id.contactsList);
-        LayoutInflater inflater = LayoutInflater.from(this);
 
-        contacts.addAll(new ContactsRepository(this).getContacts());
-        for (EmergencyContact contact : contacts) {
-            View row = inflater.inflate(R.layout.item_alert_contact, container, false);
+        LinearLayout container =
+                findViewById(R.id.contactsList);
 
-            ((TextView) row.findViewById(R.id.contactAvatar)).setText(initialsFor(contact.name));
-            ((TextView) row.findViewById(R.id.contactName)).setText(contact.name);
-            ((TextView) row.findViewById(R.id.contactDetails))
-                    .setText("Priority " + contact.priority + " \u00b7 " + formatPhone(contact.phoneNumber));
+        container.removeAllViews();
 
-            ImageView icon = row.findViewById(R.id.contactStatus);
-            TextView label = row.findViewById(R.id.contactStatusText);
-            markSending(icon, label);
-            statusIcons.add(icon);
-            statusLabels.add(label);
+        statusIcons.clear();
+        statusLabels.clear();
 
-            container.addView(row);
-        }
-    }
-
-    /** "CS" for Campus Security, "PG" for Parent / Guardian, "TF" for Trusted Friend. */
-    private String initialsFor(String name) {
-        StringBuilder initials = new StringBuilder();
-        for (String word : name.trim().split("\\s+")) {
-            if (!word.isEmpty() && Character.isLetterOrDigit(word.charAt(0)) && initials.length() < 2) {
-                initials.append(word.charAt(0));
+        // Campus Security always appears first.
+        for (DatabaseHelper.Contact contact : contacts) {
+            if (contact.locked) {
+                addContactCard(container, contact);
             }
         }
-        if (initials.length() == 0) return "?";
-        return initials.toString().toUpperCase(Locale.getDefault());
+
+        // Keep the exact heading Parent/Guardian.
+        addSection(container, "Parent/Guardian", "Guardian");
+
+        addSection(container, "Trusted Contacts", "Friend");
+
+        addSection(container, "Other Contacts", "Other");
     }
 
-    /** 0111112222 becomes 011 111 2222. */
-    private String formatPhone(String number) {
-        if (number.length() == 10) {
-            return number.substring(0, 3) + " " + number.substring(3, 6) + " " + number.substring(6);
+    private void addSection(
+            LinearLayout container,
+            String heading,
+            String relationship) {
+
+        List<DatabaseHelper.Contact> matching =
+                new ArrayList<>();
+
+        for (DatabaseHelper.Contact contact : contacts) {
+
+            if (!contact.locked
+                    && relationship.equalsIgnoreCase(
+                    contact.relationship == null
+                            ? ""
+                            : contact.relationship.trim())) {
+
+                matching.add(contact);
+            }
         }
+
+        TextView title = new TextView(this);
+
+        title.setText(heading);
+        title.setTextSize(16);
+        title.setTextColor(Color.WHITE);
+        title.setTypeface(null, Typeface.BOLD);
+
+        LinearLayout.LayoutParams titleParams =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+
+        titleParams.topMargin = dp(16);
+        titleParams.bottomMargin = dp(8);
+
+        container.addView(title, titleParams);
+
+        if (matching.isEmpty()) {
+
+            TextView empty = new TextView(this);
+
+            empty.setText("No contacts added yet");
+            empty.setTextColor(Color.WHITE);
+            empty.setAlpha(0.8f);
+            empty.setTextSize(13);
+            empty.setPadding(dp(8), dp(8), dp(8), dp(8));
+
+            container.addView(empty);
+            return;
+        }
+
+        for (DatabaseHelper.Contact contact : matching) {
+            addContactCard(container, contact);
+        }
+    }
+
+    private void addContactCard(
+            LinearLayout container,
+            DatabaseHelper.Contact contact) {
+
+        View row = LayoutInflater.from(this).inflate(
+                R.layout.item_alert_contact,
+                container,
+                false
+        );
+
+        TextView avatar = row.findViewById(R.id.contactAvatar);
+        TextView name = row.findViewById(R.id.contactName);
+        TextView details = row.findViewById(R.id.contactDetails);
+
+        ImageView icon = row.findViewById(R.id.contactStatus);
+        TextView status = row.findViewById(R.id.contactStatusText);
+
+        avatar.setText(initialsFor(contact.name));
+        name.setText(contact.name);
+
+        String number = contact.phone == null
+                ? ""
+                : contact.phone.trim();
+
+        details.setText(
+                "Priority " + contact.priority
+                        + " · "
+                        + formatPhone(number)
+        );
+
+        markSending(icon, status);
+
+        statusIcons.add(icon);
+        statusLabels.add(status);
+
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+
+        params.bottomMargin = dp(8);
+
+        container.addView(row, params);
+    }
+
+    // ====================================================
+    // CONTACT HELPERS
+    // ====================================================
+
+    private String initialsFor(String name) {
+
+        if (name == null || name.trim().isEmpty()) {
+            return "?";
+        }
+
+        StringBuilder initials = new StringBuilder();
+
+        for (String word : name.trim().split("\\s+")) {
+
+            if (!word.isEmpty() && initials.length() < 2) {
+                initials.append(
+                        Character.toUpperCase(word.charAt(0))
+                );
+            }
+        }
+
+        return initials.toString();
+    }
+
+    private String formatPhone(String number) {
+
+        if (number == null || number.isEmpty()) {
+            return "Number unavailable";
+        }
+
+        if (number.length() == 10) {
+            return number.substring(0, 3)
+                    + " "
+                    + number.substring(3, 6)
+                    + " "
+                    + number.substring(6);
+        }
+
         return number;
     }
 
-    private void markSending(ImageView icon, TextView label) {
+    private int dp(int value) {
+
+        return (int) (
+                value * getResources()
+                        .getDisplayMetrics().density
+        );
+    }
+
+    // ====================================================
+    // SMS STATUS
+    // ====================================================
+
+    private void markSending(
+            ImageView icon,
+            TextView label) {
+
         icon.setImageResource(R.drawable.ic_check);
         icon.setAlpha(0.25f);
-        label.setText("Sending\u2026");
+
+        label.setText("Checking alert...");
         label.setTextColor(GREY);
     }
 
-    private void markSent(ImageView icon, TextView label) {
+    // UPDATED: SMS requested, not confirmed delivered.
+    private void markSent(
+            ImageView icon,
+            TextView label) {
+
         icon.setImageResource(R.drawable.ic_check);
         icon.setAlpha(1f);
-        label.setText("Alert sent");
+
+        label.setText("SMS requested");
         label.setTextColor(GREEN);
     }
 
-    private void markFailed(ImageView icon, TextView label) {
+    private void markFailed(
+            ImageView icon,
+            TextView label) {
+
         icon.setImageResource(R.drawable.ic_alert_circle);
         icon.setAlpha(1f);
-        label.setText("Couldn't send");
+
+        label.setText("Not confirmed");
         label.setTextColor(RED);
     }
 
-    // ---------------------------------------------------------------
-    // Location card
-    // ---------------------------------------------------------------
+    // ====================================================
+    // LOCATION STATUS
+    // ====================================================
 
     private void markLocationSending() {
-        locationTitle.setText("Sharing your location\u2026");
-        locationSubtitle.setText(LOCATION_LABEL);
+
+        locationTitle.setText("Checking your location...");
+        locationSubtitle.setText("Waiting for location");
+
         locationStatus.setImageResource(R.drawable.ic_check);
         locationStatus.setAlpha(0.25f);
     }
 
     private void markLocationShared() {
-        locationTitle.setText("Live location shared");
-        locationSubtitle.setText(LOCATION_LABEL);
+
+        locationTitle.setText("Location included in SMS request");
+
+        locationSubtitle.setText(
+                "Location was included in the requested SMS."
+        );
+
         locationStatus.setImageResource(R.drawable.ic_check);
         locationStatus.setAlpha(1f);
     }
 
     private void markLocationNotShared(boolean anyoneWasTexted) {
+
         locationTitle.setText("Location not shared");
-        locationSubtitle.setText(anyoneWasTexted ? "Alert sent without a location" : "Couldn't get your location");
-        locationStatus.setImageResource(R.drawable.ic_alert_circle);
+
+        locationSubtitle.setText(
+                anyoneWasTexted
+                        ? "SMS requested without location"
+                        : "No location alert confirmed"
+        );
+
+        locationStatus.setImageResource(
+                R.drawable.ic_alert_circle
+        );
+
         locationStatus.setAlpha(1f);
     }
 
-    // ---------------------------------------------------------------
-    // The alert itself
-    // ---------------------------------------------------------------
+    // ====================================================
+    // SEND SOS ALERT
+    // ====================================================
 
     private void sendAlert() {
-        new SosAlertSender(this).sendAlert((notified, locationIncluded) -> {
-            if (isFinishing() || isDestroyed()) return; // the user already left; the texts still went out
 
-            for (int i = 0; i < contacts.size(); i++) {
-                if (wasNotified(contacts.get(i), notified)) {
-                    markSent(statusIcons.get(i), statusLabels.get(i));
-                } else {
-                    markFailed(statusIcons.get(i), statusLabels.get(i));
+        new SosAlertSender(this).sendAlert(
+                (notified, locationIncluded) -> {
+
+                    runOnUiThread(() -> {
+
+                        if (isFinishing() || isDestroyed()) {
+                            return;
+                        }
+
+                        int confirmedCount = 0;
+
+                        for (int i = 0; i < contacts.size(); i++) {
+
+                            DatabaseHelper.Contact contact =
+                                    contacts.get(i);
+
+                            boolean submitted =
+                                    wasNotified(contact, notified);
+
+                            if (submitted) {
+                                confirmedCount++;
+
+                                markSent(
+                                        statusIcons.get(i),
+                                        statusLabels.get(i)
+                                );
+
+                            } else {
+
+                                markFailed(
+                                        statusIcons.get(i),
+                                        statusLabels.get(i)
+                                );
+                            }
+                        }
+
+                        if (confirmedCount > 0 && locationIncluded) {
+                            markLocationShared();
+                        } else {
+                            markLocationNotShared(confirmedCount > 0);
+                        }
+
+                        if (confirmedCount == 0) {
+
+                            statusTitle.setText(
+                                    "SOS alert not confirmed"
+                            );
+
+                            statusSubtitle.setText(
+                                    "No SMS send request was confirmed. "
+                                            + "Use the call button if you need help."
+                            );
+
+                        } else {
+
+                            statusTitle.setText("SOS activated");
+
+                            // UPDATED STATUS MESSAGE
+                            statusSubtitle.setText(
+                                    confirmedCount
+                                            + " SMS send request(s) submitted."
+                            );
+                        }
+                    });
                 }
-            }
-
-            if (!notified.isEmpty() && locationIncluded) {
-                markLocationShared();
-            } else {
-                markLocationNotShared(!notified.isEmpty());
-            }
-            statusSubtitle.setText(subtitleFor(notified.size(), locationIncluded));
-        });
+        );
     }
 
-    private boolean wasNotified(EmergencyContact contact, List<EmergencyContact> notified) {
-        for (EmergencyContact n : notified) {
-            if (n.name.equals(contact.name) && n.phoneNumber.equals(contact.phoneNumber)) return true;
+    private boolean wasNotified(
+            DatabaseHelper.Contact contact,
+            List<EmergencyContact> notified) {
+
+        if (notified == null) return false;
+
+        for (EmergencyContact sent : notified) {
+
+            if (sent.phoneNumber != null
+                    && contact.phone != null
+                    && normalizePhone(sent.phoneNumber).equals(
+                    normalizePhone(contact.phone))) {
+
+                return true;
+            }
         }
+
         return false;
     }
 
-    private String subtitleFor(int textedCount, boolean locationIncluded) {
-        if (textedCount == 0) {
-            if (!SosAlertSender.hasSmsPermission(this)) {
-                return "SMS permission is off, so your contacts weren't texted. Call Campus Security now.";
-            }
-            return "We couldn't text your contacts. Call Campus Security now.";
+    private String normalizePhone(String number) {
+
+        String cleaned = number.replaceAll("[\\s-]", "");
+
+        if (cleaned.startsWith("+27")) {
+            return "0" + cleaned.substring(3);
         }
-        if (!locationIncluded) {
-            return "Your contacts were alerted, but we couldn't get your location.";
-        }
-        return "Your location has been shared with your emergency contacts.";
+
+        return cleaned;
     }
 
-    // ---------------------------------------------------------------
-    // Buttons
-    // ---------------------------------------------------------------
+    // ====================================================
+    // TIMER
+    // ====================================================
+
+    private void updateTimerText() {
+
+        int minutes = elapsedSeconds / 60;
+        int seconds = elapsedSeconds % 60;
+
+        timerText.setText(
+                String.format(
+                        Locale.getDefault(),
+                        "%02d:%02d",
+                        minutes,
+                        seconds
+                )
+        );
+    }
+
+    // ====================================================
+    // LIVE DOT ANIMATION
+    // ====================================================
+
+    private void pulseTheLiveDot() {
+
+        View dot = findViewById(R.id.liveDot);
+
+        AlphaAnimation pulse =
+                new AlphaAnimation(1f, 0.2f);
+
+        pulse.setDuration(700);
+        pulse.setRepeatMode(Animation.REVERSE);
+        pulse.setRepeatCount(Animation.INFINITE);
+
+        dot.startAnimation(pulse);
+    }
+
+    // ====================================================
+    // BUTTONS
+    // ====================================================
 
     private void setUpButtons() {
-        findViewById(R.id.cancelButton).setOnClickListener(v -> {
-            // Closes this page and returns to the Dashboard. Texts already sent can't be taken back.
-            handler.removeCallbacks(timerTick);
-            finish();
-        });
 
-        findViewById(R.id.callSecurityRow).setOnClickListener(v ->
-                startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + CAMPUS_SECURITY_NUMBER))));
+        findViewById(R.id.cancelButton)
+                .setOnClickListener(v -> {
 
-        // TODO (teammates): the bell (R.id.notificationsButton) opens their Notifications screen
+                    handler.removeCallbacks(timerTick);
+
+                    // Closing the screen cannot recall SMS requests.
+                    finish();
+                });
+
+        findViewById(R.id.callSecurityRow)
+                .setOnClickListener(v -> {
+
+                    Intent intent = new Intent(
+                            Intent.ACTION_DIAL,
+                            Uri.parse(
+                                    "tel:" + CAMPUS_SECURITY_NUMBER
+                            )
+                    );
+
+                    startActivity(intent);
+                });
     }
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
+
         handler.removeCallbacks(timerTick);
+
+        super.onDestroy();
     }
 }
+
+

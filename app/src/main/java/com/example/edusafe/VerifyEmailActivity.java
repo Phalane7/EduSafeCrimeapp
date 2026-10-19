@@ -16,40 +16,52 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class VerifyEmailActivity extends AppCompatActivity {
 
-    public static final String EXTRA_EMAIL = "extra_email";
+    // OTP verification modes
+    public static final String EXTRA_MODE = "extra_mode";
+    public static final String MODE_SIGNUP = "signup";
+    public static final String MODE_RECOVERY = "recovery";
 
+    // Countdown: 2 minutes and 45 seconds
     private static final long RESEND_WINDOW_MS =
             2 * 60 * 1000 + 45 * 1000;
 
     private EditText[] otpBoxes;
-
     private TextView tvResendTimer;
-
     private Button btnVerify;
 
     private String email;
+    private String mode;
 
     private CountDownTimer countDownTimer;
 
-    private final AuthRepository authRepository =
-            new AuthRepository();
+    // Supabase authentication repository
+    private AuthRepository authRepository;
 
     @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
 
+        // Initialize Supabase authentication
+        authRepository = new AuthRepository(this);
+
+        // Keep existing OTP XML design
         setContentView(R.layout.activity_verify_email);
 
-        // -------------------------------------------------
-        // Get email from SignUpActivity
-        // -------------------------------------------------
+        // Get email from previous screen
+        email = getIntent().getStringExtra(
+                ForgotPasswordActivity.EXTRA_EMAIL
+        );
 
-        email = getIntent().getStringExtra(EXTRA_EMAIL);
+        // Identify registration or password recovery
+        mode = getIntent().getStringExtra(EXTRA_MODE);
 
+        if (mode == null) {
+            mode = MODE_RECOVERY;
+        }
+
+        // Make sure email was provided
         if (email == null || email.trim().isEmpty()) {
-
             Toast.makeText(
                     this,
                     "Email address is missing.",
@@ -57,36 +69,20 @@ public class VerifyEmailActivity extends AppCompatActivity {
             ).show();
 
             finish();
-
             return;
         }
 
-        email = email.trim().toLowerCase();
+        TextView tvSentTo = findViewById(R.id.tvSentTo);
+        tvResendTimer = findViewById(R.id.tvResendTimer);
+        TextView tvGoBack = findViewById(R.id.tvGoBack);
+        btnVerify = findViewById(R.id.btnVerify);
 
-        // -------------------------------------------------
-        // Find views
-        // -------------------------------------------------
-
-        TextView tvSentTo =
-                findViewById(R.id.tvSentTo);
-
-        tvResendTimer =
-                findViewById(R.id.tvResendTimer);
-
-        TextView tvGoBack =
-                findViewById(R.id.tvGoBack);
-
-        btnVerify =
-                findViewById(R.id.btnVerify);
-
+        // Display student's email address
         tvSentTo.setText(
                 "We have sent a 6-digit code to\n" + email
         );
 
-        // -------------------------------------------------
-        // OTP boxes
-        // -------------------------------------------------
-
+        // Connect the six OTP input boxes
         otpBoxes = new EditText[]{
                 findViewById(R.id.etOtp1),
                 findViewById(R.id.etOtp2),
@@ -96,42 +92,43 @@ public class VerifyEmailActivity extends AppCompatActivity {
                 findViewById(R.id.etOtp6)
         };
 
+        // Automatically move between OTP boxes
         setUpOtpAutoAdvance();
 
-        // -------------------------------------------------
         // Verify button
-        // -------------------------------------------------
+        btnVerify.setOnClickListener(v -> attemptVerify());
 
-        btnVerify.setOnClickListener(
-                v -> attemptVerify()
-        );
-
-        // -------------------------------------------------
-        // Go back
-        // -------------------------------------------------
-
+        // Back button
         tvGoBack.setOnClickListener(v -> {
 
-            startActivity(
-                    new Intent(
-                            VerifyEmailActivity.this,
-                            SignUpActivity.class
-                    )
-            );
+            Intent intent;
 
+            if (MODE_SIGNUP.equals(mode)) {
+
+                intent = new Intent(
+                        VerifyEmailActivity.this,
+                        SignUpActivity.class
+                );
+
+            } else {
+
+                intent = new Intent(
+                        VerifyEmailActivity.this,
+                        ForgotPasswordActivity.class
+                );
+            }
+
+            startActivity(intent);
             finish();
         });
 
-        // -------------------------------------------------
-        // Start resend timer
-        // -------------------------------------------------
-
+        // Start resend countdown
         startResendCountdown();
     }
 
-    // ---------------------------------------------------------
-    // OTP BOXES
-    // ---------------------------------------------------------
+    // -----------------------------------------
+    // AUTOMATIC OTP BOX NAVIGATION
+    // -----------------------------------------
 
     private void setUpOtpAutoAdvance() {
 
@@ -147,8 +144,7 @@ public class VerifyEmailActivity extends AppCompatActivity {
                                 CharSequence s,
                                 int start,
                                 int count,
-                                int after
-                        ) {
+                                int after) {
                         }
 
                         @Override
@@ -156,25 +152,23 @@ public class VerifyEmailActivity extends AppCompatActivity {
                                 CharSequence s,
                                 int start,
                                 int before,
-                                int count
-                        ) {
+                                int count) {
                         }
 
                         @Override
                         public void afterTextChanged(
-                                Editable s
-                        ) {
+                                Editable s) {
 
                             if (s.length() == 1
                                     && index < otpBoxes.length - 1) {
 
-                                otpBoxes[index + 1]
-                                        .requestFocus();
+                                otpBoxes[index + 1].requestFocus();
                             }
                         }
                     }
             );
 
+            // Move backward when deleting
             otpBoxes[i].setOnKeyListener(
                     (v, keyCode, event) -> {
 
@@ -187,11 +181,8 @@ public class VerifyEmailActivity extends AppCompatActivity {
                                 .isEmpty()
                                 && index > 0) {
 
-                            otpBoxes[index - 1]
-                                    .requestFocus();
-
-                            otpBoxes[index - 1]
-                                    .setText("");
+                            otpBoxes[index - 1].requestFocus();
+                            otpBoxes[index - 1].setText("");
                         }
 
                         return false;
@@ -200,84 +191,77 @@ public class VerifyEmailActivity extends AppCompatActivity {
         }
     }
 
-    // ---------------------------------------------------------
-    // RESEND TIMER
-    // ---------------------------------------------------------
+    // -----------------------------------------
+    // RESEND OTP COUNTDOWN
+    // -----------------------------------------
 
     private void startResendCountdown() {
 
+        // Cancel previous countdown if active
+        if (countDownTimer != null) {
+            countDownTimer.cancel();
+        }
+
+        tvResendTimer.setOnClickListener(null);
         tvResendTimer.setClickable(false);
 
-        countDownTimer =
-                new CountDownTimer(
-                        RESEND_WINDOW_MS,
-                        1000
-                ) {
+        countDownTimer = new CountDownTimer(
+                RESEND_WINDOW_MS,
+                1000
+        ) {
 
-                    @SuppressLint("DefaultLocale")
-                    @Override
-                    public void onTick(
-                            long millisUntilFinished
-                    ) {
+            @SuppressLint("DefaultLocale")
+            @Override
+            public void onTick(long millisUntilFinished) {
 
-                        int minutes =
-                                (int)
-                                        (millisUntilFinished / 1000)
-                                        / 60;
+                int minutes =
+                        (int) (millisUntilFinished / 1000) / 60;
 
-                        int seconds =
-                                (int)
-                                        (millisUntilFinished / 1000)
-                                        % 60;
+                int seconds =
+                        (int) (millisUntilFinished / 1000) % 60;
 
-                        tvResendTimer.setText(
-                                String.format(
-                                        "Resend code in %d:%02d",
-                                        minutes,
-                                        seconds
-                                )
-                        );
-                    }
+                tvResendTimer.setText(
+                        String.format(
+                                "Resend code in %d:%02d",
+                                minutes,
+                                seconds
+                        )
+                );
+            }
 
-                    @SuppressLint("SetTextI18n")
-                    @Override
-                    public void onFinish() {
+            @SuppressLint("SetTextI18n")
+            @Override
+            public void onFinish() {
 
-                        tvResendTimer.setText(
-                                "Resend code"
-                        );
+                tvResendTimer.setText("Resend code");
+                tvResendTimer.setClickable(true);
 
-                        tvResendTimer.setClickable(true);
-
-                        tvResendTimer.setOnClickListener(
-                                v -> resendCode()
-                        );
-                    }
-                }.start();
+                tvResendTimer.setOnClickListener(
+                        v -> resendCode()
+                );
+            }
+        }.start();
     }
 
-    // ---------------------------------------------------------
-    // RESEND REGISTRATION OTP
-    // ---------------------------------------------------------
+    // -----------------------------------------
+    // RESEND OTP
+    // -----------------------------------------
 
     private void resendCode() {
 
         tvResendTimer.setClickable(false);
 
-        authRepository.sendRegistrationCode(
-                email,
-                new AuthCallback<>() {
+        AuthCallback<Void> callback =
+                new AuthCallback<Void>() {
 
                     @Override
                     public void onSuccess(Void result) {
 
                         Toast.makeText(
                                 VerifyEmailActivity.this,
-                                "New verification code sent.",
-                                Toast.LENGTH_SHORT
+                                "New verification code requested. Check your email.",
+                                Toast.LENGTH_LONG
                         ).show();
-
-                        clearOtpBoxes();
 
                         startResendCountdown();
                     }
@@ -293,25 +277,38 @@ public class VerifyEmailActivity extends AppCompatActivity {
                                 Toast.LENGTH_LONG
                         ).show();
                     }
-                }
-        );
+                };
+
+        // Choose the correct Supabase endpoint
+        if (MODE_SIGNUP.equals(mode)) {
+
+            authRepository.resendSignUpCode(
+                    email,
+                    callback
+            );
+
+        } else {
+
+            authRepository.sendPasswordResetCode(
+                    email,
+                    callback
+            );
+        }
     }
 
-    // ---------------------------------------------------------
-    // VERIFY REGISTRATION OTP
-    // ---------------------------------------------------------
+    // -----------------------------------------
+    // VERIFY SIX-DIGIT OTP
+    // -----------------------------------------
 
     private void attemptVerify() {
 
-        StringBuilder code =
-                new StringBuilder();
+        StringBuilder code = new StringBuilder();
 
+        // Collect digits from all six boxes
         for (EditText box : otpBoxes) {
 
             code.append(
-                    box.getText()
-                            .toString()
-                            .trim()
+                    box.getText().toString().trim()
             );
         }
 
@@ -319,7 +316,7 @@ public class VerifyEmailActivity extends AppCompatActivity {
 
             Toast.makeText(
                     this,
-                    "Please enter the full 6-digit code",
+                    "Please enter the full 6-digit code.",
                     Toast.LENGTH_SHORT
             ).show();
 
@@ -328,39 +325,51 @@ public class VerifyEmailActivity extends AppCompatActivity {
 
         btnVerify.setEnabled(false);
 
-        authRepository.verifyRegistrationCode(
-                email,
-                code.toString(),
-                new AuthCallback<>() {
+        final String enteredCode = code.toString();
+
+        AuthCallback<Void> callback =
+                new AuthCallback<Void>() {
 
                     @Override
                     public void onSuccess(Void result) {
 
                         btnVerify.setEnabled(true);
 
-                        Toast.makeText(
-                                VerifyEmailActivity.this,
-                                "Email verified successfully!",
-                                Toast.LENGTH_LONG
-                        ).show();
+                        if (MODE_SIGNUP.equals(mode)) {
 
-                        /*
-                         * Registration is complete.
-                         *
-                         * DO NOT open CreateNewPasswordActivity.
-                         *
-                         * The user should now log in.
-                         */
+                            // Registration OTP verified
+                            Toast.makeText(
+                                    VerifyEmailActivity.this,
+                                    "Email verified successfully! Please log in.",
+                                    Toast.LENGTH_LONG
+                            ).show();
 
-                        Intent intent =
-                                new Intent(
-                                        VerifyEmailActivity.this,
-                                        LoginActivity.class
-                                );
+                            Intent intent = new Intent(
+                                    VerifyEmailActivity.this,
+                                    LoginActivity.class
+                            );
 
-                        startActivity(intent);
+                            intent.addFlags(
+                                    Intent.FLAG_ACTIVITY_NEW_TASK
+                                            | Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            );
 
-                        finish();
+                            startActivity(intent);
+                            finish();
+
+                        } else {
+
+                            // Recovery OTP verified.
+                            // Password updating will be
+                            // implemented with a Supabase
+                            // recovery session in the next step.
+
+                            Toast.makeText(
+                                    VerifyEmailActivity.this,
+                                    "Code verified. Password reset setup is not complete yet.",
+                                    Toast.LENGTH_LONG
+                            ).show();
+                        }
                     }
 
                     @Override
@@ -374,30 +383,34 @@ public class VerifyEmailActivity extends AppCompatActivity {
                                 Toast.LENGTH_LONG
                         ).show();
                     }
-                }
-        );
-    }
+                };
 
-    // ---------------------------------------------------------
-    // CLEAR OTP BOXES
-    // ---------------------------------------------------------
+        if (MODE_SIGNUP.equals(mode)) {
 
-    private void clearOtpBoxes() {
+            // Verify student registration OTP
+            authRepository.verifySignUpCode(
+                    email,
+                    enteredCode,
+                    callback
+            );
 
-        for (EditText box : otpBoxes) {
-            box.setText("");
+        } else {
+
+            // Verify password recovery OTP
+            authRepository.verifyPasswordResetCode(
+                    email,
+                    enteredCode,
+                    callback
+            );
         }
-
-        otpBoxes[0].requestFocus();
     }
 
-    // ---------------------------------------------------------
-    // CLEAN UP TIMER
-    // ---------------------------------------------------------
+    // -----------------------------------------
+    // CLEAN UP COUNTDOWN
+    // -----------------------------------------
 
     @Override
     protected void onDestroy() {
-
         super.onDestroy();
 
         if (countDownTimer != null) {
@@ -405,3 +418,4 @@ public class VerifyEmailActivity extends AppCompatActivity {
         }
     }
 }
+

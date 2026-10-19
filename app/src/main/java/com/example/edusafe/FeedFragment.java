@@ -1,15 +1,13 @@
 package com.example.edusafe;
 
 import android.content.Context;
-import android.content.res.ColorStateList;
-import android.database.Cursor;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.OpenableColumns;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -21,7 +19,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -29,510 +26,802 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class FeedFragment extends Fragment {
-    private static final String TAG = "EduSafe";
-    private static final String CACHE_KEY = "feed_cache";
-    private static final long MAX_PHOTO_BYTES = 5L * 1024 * 1024; // 5 MB
-    private static final int MAX_POST = 500;
-    private static final int MAX_COMMENT = 300;
+
+    private static final String PREFS = "edusafe_local_feed";
+    private static final String POSTS_KEY = "posts";
+    private static final int MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
     private EditText etPost;
     private ImageView ivPreview;
-    private TextView tvAddPhoto, tvEmpty, tvPost;
+    private TextView tvAddPhoto, tvPost, tvEmpty;
     private LinearLayout listContainer;
-    private String photoPath = null;
-    private boolean posting = false;
-    private boolean warnedOffline = false;
 
-    // State of the open comments box
-    private LinearLayout dlgList;
-    private TextView dlgNone, dlgReplying;
-    private EditText dlgInput;
-    private String dlgPostId = "";
-    private String replyParent = ""; // empty = normal comment, otherwise the id of the comment being replied to
-    private int dlgCount = 0;
+    private SharedPreferences prefs;
+    private String selectedPhotoPath;
 
-    private final ActivityResultLauncher<PickVisualMediaRequest> pickImage =
-            registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), this::onImagePicked);
+    private final ActivityResultLauncher<String> pickPhoto =
+            registerForActivityResult(
+                    new ActivityResultContracts.GetContent(),
+                    this::handleSelectedPhoto
+            );
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
-        View v = inflater.inflate(R.layout.fragment_feed, container, false);
-        etPost = v.findViewById(R.id.etPost);
-        ivPreview = v.findViewById(R.id.ivPreview);
-        tvAddPhoto = v.findViewById(R.id.tvAddPhoto);
-        tvEmpty = v.findViewById(R.id.tvEmpty);
-        tvPost = v.findViewById(R.id.tvPost);
-        listContainer = v.findViewById(R.id.listContainer);
+    public View onCreateView(
+            @NonNull LayoutInflater inflater,
+            @Nullable ViewGroup container,
+            @Nullable Bundle savedInstanceState) {
 
-        tvAddPhoto.setOnClickListener(x -> pickImage.launch(new PickVisualMediaRequest.Builder()
-                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
-                .build()));
-        tvPost.setOnClickListener(x -> post());
-        return v;
+        View view = inflater.inflate(
+                R.layout.fragment_feed, container, false
+        );
+
+        prefs = requireContext().getSharedPreferences(
+                PREFS, Context.MODE_PRIVATE
+        );
+
+        etPost = view.findViewById(R.id.etPost);
+        ivPreview = view.findViewById(R.id.ivPreview);
+        tvAddPhoto = view.findViewById(R.id.tvAddPhoto);
+        tvPost = view.findViewById(R.id.tvPost);
+        tvEmpty = view.findViewById(R.id.tvEmpty);
+        listContainer = view.findViewById(R.id.listContainer);
+
+        tvAddPhoto.setOnClickListener(v ->
+                pickPhoto.launch("image/*")
+        );
+
+        tvPost.setOnClickListener(v -> createPost());
+
+        displayPosts();
+
+        return view;
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-        loadPosts();
-    }
+    // ----------------------------------------------------
+    // CREATE POST
+    // ----------------------------------------------------
 
-    // ---------- Load the shared feed (falls back to the last saved copy when offline) ----------
-    private void loadPosts() {
-        final Context app = requireContext().getApplicationContext();
-        Net.bg(() -> {
-            final ApiClient.Result res = ApiClient.get(app, "/posts");
-            final List<FeedModels.Post> shown = postsOrCache(app, res);
-            Net.main(() -> {
-                if (!isAdded() || getView() == null) return;
-                render(shown);
-                if (!res.ok() && !warnedOffline) {
-                    warnedOffline = true;
-                    toast(res.offline() ? "You're offline. Showing the last posts we saved." : res.error);
-                }
-            });
-        });
-    }
+    private void createPost() {
 
-    private List<FeedModels.Post> postsOrCache(Context app, ApiClient.Result res) {
-        try {
-            if (res.ok() && res.json != null) {
-                Session.putString(app, CACHE_KEY, res.json.toString());
-                return parsePosts(res.json.optJSONArray("posts"));
-            }
-            String cached = Session.getString(app, CACHE_KEY);
-            if (cached != null) return parsePosts(new JSONObject(cached).optJSONArray("posts"));
-        } catch (Exception e) {
-            Log.w(TAG, "Feed cache problem", e);
-        }
-        return new ArrayList<>();
-    }
+        String message = etPost.getText().toString().trim();
 
-    private List<FeedModels.Post> parsePosts(JSONArray a) {
-        List<FeedModels.Post> list = new ArrayList<>();
-        if (a == null) return list;
-        for (int i = 0; i < a.length(); i++) {
-            JSONObject o = a.optJSONObject(i);
-            if (o != null) list.add(FeedModels.Post.from(o));
-        }
-        return list;
-    }
-
-    private void render(List<FeedModels.Post> posts) {
-        listContainer.removeAllViews();
-        for (FeedModels.Post p : posts) listContainer.addView(postView(p));
-        tvEmpty.setVisibility(posts.isEmpty() ? View.VISIBLE : View.GONE);
-    }
-
-    // ---------- Create a post ----------
-    private void post() {
-        if (posting) return;
-        final String text = etPost.getText().toString().trim();
-        if (text.length() < 5) {
-            etPost.setError("Write a few words about what you saw.");
+        if (message.length() < 5) {
+            etPost.setError("Please write at least 5 characters.");
             etPost.requestFocus();
             return;
         }
-        if (text.length() > MAX_POST) {
-            etPost.setError("Please keep posts under 500 characters.");
+
+        try {
+            JSONArray posts = getPosts();
+
+            JSONObject post = new JSONObject();
+
+            post.put("id", UUID.randomUUID().toString());
+            post.put("text", message);
+            post.put("photo", selectedPhotoPath == null
+                    ? "" : selectedPhotoPath);
+            post.put("createdAt", System.currentTimeMillis());
+            post.put("likes", 0);
+            post.put("liked", false);
+            post.put("comments", new JSONArray());
+            post.put("mine", true);
+
+            JSONArray updated = new JSONArray();
+
+            // Newest post appears first.
+            updated.put(post);
+
+            for (int i = 0; i < posts.length(); i++) {
+                updated.put(posts.get(i));
+            }
+
+            savePosts(updated);
+
+            etPost.setText("");
+            selectedPhotoPath = null;
+
+            ivPreview.setImageDrawable(null);
+            ivPreview.setVisibility(View.GONE);
+            tvAddPhoto.setText("Add photo");
+
+            displayPosts();
+
+            toast("Post published successfully.");
+
+        } catch (Exception e) {
+            toast("Unable to publish your post.");
+        }
+    }
+
+    // ----------------------------------------------------
+    // DISPLAY POSTS
+    // ----------------------------------------------------
+
+    private void displayPosts() {
+
+        if (listContainer == null) return;
+
+        listContainer.removeAllViews();
+
+        JSONArray posts = getPosts();
+
+        tvEmpty.setVisibility(
+                posts.length() == 0 ? View.VISIBLE : View.GONE
+        );
+
+        for (int i = 0; i < posts.length(); i++) {
+
+            JSONObject post = posts.optJSONObject(i);
+
+            if (post != null) {
+                listContainer.addView(createPostCard(post));
+            }
+        }
+    }
+
+    private View createPostCard(JSONObject post) {
+
+        View card = LayoutInflater.from(requireContext())
+                .inflate(R.layout.item_post, listContainer, false);
+
+        TextView tvAuthor = card.findViewById(R.id.tvAuthor);
+        TextView tvTime = card.findViewById(R.id.tvTime);
+        TextView tvText = card.findViewById(R.id.tvText);
+        TextView tvLike = card.findViewById(R.id.tvLike);
+        TextView tvCommentBtn =
+                card.findViewById(R.id.tvCommentBtn);
+        TextView tvDelete = card.findViewById(R.id.tvDelete);
+        ImageView ivPhoto =
+                card.findViewById(R.id.ivPostPhoto);
+
+        String postId = post.optString("id");
+
+        tvAuthor.setText(
+                post.optBoolean("mine", false)
+                        ? "You"
+                        : "Anonymous student"
+        );
+
+        tvTime.setText(timeAgo(post.optLong("createdAt")));
+        tvText.setText(post.optString("text"));
+
+        String photo = post.optString("photo", "");
+
+        if (!photo.isEmpty()) {
+            showPhoto(ivPhoto, photo);
+        } else {
+            ivPhoto.setVisibility(View.GONE);
+        }
+
+        updateLikeButton(tvLike, post);
+
+        JSONArray comments = post.optJSONArray("comments");
+
+        int commentCount = comments == null
+                ? 0 : comments.length();
+
+        tvCommentBtn.setText("♧ " + commentCount);
+        tvCommentBtn.setContentDescription(
+                "View " + commentCount + " comments"
+        );
+
+        tvLike.setOnClickListener(v -> toggleLike(postId));
+
+        tvCommentBtn.setOnClickListener(v ->
+                showComments(postId)
+        );
+
+        if (post.optBoolean("mine", false)) {
+
+            tvDelete.setVisibility(View.VISIBLE);
+
+            tvDelete.setOnClickListener(v ->
+                    confirmDeletePost(postId)
+            );
+
+        } else {
+            tvDelete.setVisibility(View.GONE);
+        }
+
+        return card;
+    }
+
+    // ----------------------------------------------------
+    // LIKES
+    // ----------------------------------------------------
+
+    private void toggleLike(String postId) {
+
+        JSONArray posts = getPosts();
+
+        JSONObject post = findPost(posts, postId);
+
+        if (post == null) return;
+
+        try {
+            boolean liked = post.optBoolean("liked", false);
+            int likes = post.optInt("likes", 0);
+
+            post.put("liked", !liked);
+            post.put("likes", liked
+                    ? Math.max(0, likes - 1)
+                    : likes + 1);
+
+            savePosts(posts);
+            displayPosts();
+
+        } catch (Exception e) {
+            toast("Unable to update like.");
+        }
+    }
+
+    private void updateLikeButton(
+            TextView button, JSONObject post) {
+
+        boolean liked = post.optBoolean("liked", false);
+        int likes = post.optInt("likes", 0);
+
+        button.setText((liked ? "♥ " : "♡ ") + likes);
+
+        button.setTextColor(
+                liked
+                        ? Color.rgb(220, 40, 65)
+                        : requireContext().getColor(R.color.navy)
+        );
+
+        button.setContentDescription(
+                (liked ? "Unlike post" : "Like post")
+                        + ", " + likes + " likes"
+        );
+    }
+
+    // ----------------------------------------------------
+    // COMMENTS
+    // ----------------------------------------------------
+
+    private void showComments(String postId) {
+
+        JSONObject post = findPost(getPosts(), postId);
+
+        if (post == null) return;
+
+        LinearLayout layout = new LinearLayout(requireContext());
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dp(18), dp(12), dp(18), dp(12));
+
+        android.widget.ScrollView scroll =
+                new android.widget.ScrollView(requireContext());
+
+        LinearLayout commentList =
+                new LinearLayout(requireContext());
+
+        commentList.setOrientation(LinearLayout.VERTICAL);
+
+        scroll.addView(commentList);
+
+        layout.addView(
+                scroll,
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        0,
+                        1f
+                )
+        );
+
+        EditText input = new EditText(requireContext());
+        input.setHint("Write a comment...");
+        input.setMaxLines(4);
+        input.setMaxEms(300);
+        input.setSingleLine(false);
+        input.setInputType(
+                android.text.InputType.TYPE_CLASS_TEXT
+                        | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                        | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+        );
+        input.setFilters(new android.text.InputFilter[]{
+                new android.text.InputFilter.LengthFilter(300)
+        });
+
+        layout.addView(input);
+
+        TextView send = new TextView(requireContext());
+        send.setText("Send comment");
+        send.setTextColor(
+                requireContext().getColor(R.color.white)
+        );
+        send.setTypeface(null, Typeface.BOLD);
+        send.setGravity(Gravity.CENTER);
+        send.setMinHeight(dp(48));
+        send.setBackgroundResource(R.drawable.bg_chip_selected);
+
+        LinearLayout.LayoutParams sendParams =
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                );
+
+        sendParams.topMargin = dp(8);
+        layout.addView(send, sendParams);
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setTitle("Comments")
+                .setView(layout)
+                .setNegativeButton("Close", null)
+                .create();
+
+        dialog.setOnShowListener(ignored -> {
+
+            // Give the comment area space inside the dialog.
+            scroll.getLayoutParams().height = dp(260);
+            scroll.getLayoutParams().width =
+                    ViewGroup.LayoutParams.MATCH_PARENT;
+            scroll.requestLayout();
+
+            renderComments(postId, commentList);
+
+            send.setOnClickListener(v -> {
+
+                String message =
+                        input.getText().toString().trim();
+
+                if (message.isEmpty()) {
+                    input.setError("Write a comment first.");
+                    return;
+                }
+
+                if (addComment(postId, message)) {
+                    input.setText("");
+                    renderComments(postId, commentList);
+                    displayPosts();
+                }
+            });
+        });
+
+        dialog.show();
+    }
+
+    private boolean addComment(String postId, String message) {
+
+        JSONArray posts = getPosts();
+        JSONObject post = findPost(posts, postId);
+
+        if (post == null) return false;
+
+        try {
+            JSONArray comments = post.optJSONArray("comments");
+
+            if (comments == null) {
+                comments = new JSONArray();
+            }
+
+            JSONObject comment = new JSONObject();
+
+            comment.put("id", UUID.randomUUID().toString());
+            comment.put("text", message);
+            comment.put("createdAt", System.currentTimeMillis());
+            comment.put("mine", true);
+
+            comments.put(comment);
+
+            post.put("comments", comments);
+
+            savePosts(posts);
+
+            return true;
+
+        } catch (Exception e) {
+            toast("Unable to save comment.");
+            return false;
+        }
+    }
+
+    private void renderComments(
+            String postId, LinearLayout container) {
+
+        container.removeAllViews();
+
+        JSONObject post = findPost(getPosts(), postId);
+
+        if (post == null) return;
+
+        JSONArray comments = post.optJSONArray("comments");
+
+        if (comments == null || comments.length() == 0) {
+
+            TextView empty = new TextView(requireContext());
+            empty.setText("No comments yet. Be the first.");
+            empty.setTextColor(
+                    requireContext().getColor(R.color.muted)
+            );
+            empty.setPadding(0, dp(12), 0, dp(12));
+
+            container.addView(empty);
             return;
         }
-        posting = true;
-        tvPost.setAlpha(0.5f);
-        final Context app = requireContext().getApplicationContext();
-        final String photo = photoPath;
-        Net.bg(() -> {
-            ApiClient.Result r;
-            if (photo != null) {
-                r = ApiClient.upload(app, "/posts", new ApiClient.Multipart()
-                        .field("text", text).file("photo", photo, "image/jpeg"));
-            } else {
-                JSONObject body = new JSONObject();
-                try {
-                    body.put("text", text);
-                } catch (JSONException ignored) {
-                    // cannot happen
-                }
-                r = ApiClient.send(app, "POST", "/posts", body);
+
+        for (int i = 0; i < comments.length(); i++) {
+
+            JSONObject comment = comments.optJSONObject(i);
+
+            if (comment == null) continue;
+
+            LinearLayout row = new LinearLayout(requireContext());
+            row.setOrientation(LinearLayout.VERTICAL);
+            row.setPadding(0, dp(10), 0, dp(10));
+
+            TextView author = new TextView(requireContext());
+            author.setText(
+                    (comment.optBoolean("mine")
+                            ? "You"
+                            : "Anonymous student")
+                            + " · "
+                            + timeAgo(comment.optLong("createdAt"))
+            );
+            author.setTypeface(null, Typeface.BOLD);
+            author.setTextColor(
+                    requireContext().getColor(R.color.navy)
+            );
+            author.setTextSize(13);
+
+            TextView body = new TextView(requireContext());
+            body.setText(comment.optString("text"));
+            body.setTextColor(
+                    requireContext().getColor(R.color.ink)
+            );
+            body.setTextSize(15);
+            body.setPadding(0, dp(4), 0, dp(4));
+
+            row.addView(author);
+            row.addView(body);
+
+            if (comment.optBoolean("mine")) {
+
+                String commentId = comment.optString("id");
+
+                TextView delete = new TextView(requireContext());
+                delete.setText("Delete comment");
+                delete.setTextColor(
+                        requireContext().getColor(R.color.red)
+                );
+                delete.setTextSize(13);
+                delete.setMinHeight(dp(40));
+                delete.setGravity(Gravity.CENTER_VERTICAL);
+
+                delete.setOnClickListener(v ->
+                        new AlertDialog.Builder(requireContext())
+                                .setTitle("Delete comment?")
+                                .setNegativeButton("Cancel", null)
+                                .setPositiveButton("Delete", (d, w) -> {
+                                    deleteComment(postId, commentId);
+                                    renderComments(postId, container);
+                                    displayPosts();
+                                })
+                                .show()
+                );
+
+                row.addView(delete);
             }
-            final ApiClient.Result res = r;
-            Net.main(() -> {
-                posting = false;
-                if (!isAdded() || getView() == null) return;
-                tvPost.setAlpha(1f);
-                if (!res.ok()) {
-                    toast(errorText(res));
-                    return;
-                }
-                etPost.setText("");
-                etPost.setError(null);
-                if (photo != null) new File(photo).delete();
-                photoPath = null;
-                ivPreview.setImageDrawable(null);
-                ivPreview.setVisibility(View.GONE);
-                tvAddPhoto.setText("Add photo");
-                loadPosts();
-                toast("Posted");
-            });
-        });
-    }
 
-    // ---------- One post card ----------
-    private View postView(final FeedModels.Post p) {
-        View v = LayoutInflater.from(requireContext()).inflate(R.layout.item_post, listContainer, false);
-        TextView tvAuthor = v.findViewById(R.id.tvAuthor);
-        TextView tvTime = v.findViewById(R.id.tvTime);
-        TextView tvText = v.findViewById(R.id.tvText);
-        ImageView iv = v.findViewById(R.id.ivPostPhoto);
-        final TextView tvLike = v.findViewById(R.id.tvLike);
-        final TextView tvCommentBtn = v.findViewById(R.id.tvCommentBtn);
-        TextView tvDelete = v.findViewById(R.id.tvDelete);
-
-        tvAuthor.setText(p.mine ? "You" : p.author);
-        tvTime.setText(timeAgo(p.createdAt));
-        tvText.setText(p.text);
-        if (p.photoUrl != null) {
-            iv.setVisibility(View.VISIBLE);
-            ImageLoader.load(p.photoUrl, iv);
-        } else {
-            iv.setVisibility(View.GONE);
+            container.addView(row);
         }
-        bindCounts(p, tvLike, tvCommentBtn);
+    }
 
-        tvLike.setOnClickListener(x -> {
-            final Context app = requireContext().getApplicationContext();
-            Net.bg(() -> {
-                final ApiClient.Result res = ApiClient.send(app, "POST", "/posts/" + p.id + "/like", null);
-                Net.main(() -> {
-                    if (!isAdded()) return;
-                    if (!res.ok() || res.json == null) {
-                        toast(errorText(res));
-                        return;
-                    }
-                    p.liked = res.json.optBoolean("liked", p.liked);
-                    p.likes = res.json.optInt("likes", p.likes);
-                    bindCounts(p, tvLike, tvCommentBtn);
-                });
-            });
-        });
-        tvCommentBtn.setOnClickListener(x -> showComments(p, tvLike, tvCommentBtn));
+    private void deleteComment(
+            String postId, String commentId) {
 
-        if (p.mine) {
-            tvDelete.setVisibility(View.VISIBLE);
-            tvDelete.setOnClickListener(x -> confirmDeletePost(p));
+        JSONArray posts = getPosts();
+        JSONObject post = findPost(posts, postId);
+
+        if (post == null) return;
+
+        JSONArray oldComments =
+                post.optJSONArray("comments");
+
+        if (oldComments == null) return;
+
+        JSONArray updated = new JSONArray();
+
+        for (int i = 0; i < oldComments.length(); i++) {
+
+            JSONObject comment =
+                    oldComments.optJSONObject(i);
+
+            if (comment != null
+                    && !commentId.equals(
+                    comment.optString("id"))) {
+                updated.put(comment);
+            }
         }
-        return v;
+
+        try {
+            post.put("comments", updated);
+            savePosts(posts);
+        } catch (Exception e) {
+            toast("Unable to delete comment.");
+        }
     }
 
-    private void bindCounts(FeedModels.Post p, TextView like, TextView comment) {
-        like.setText(String.valueOf(p.likes));
-        like.setCompoundDrawablesWithIntrinsicBounds(
-                p.liked ? R.drawable.ic_heart : R.drawable.ic_heart_outline, 0, 0, 0);
-        int c = requireContext().getColor(p.liked ? R.color.red : R.color.navy);
-        like.setTextColor(c);
-        like.setCompoundDrawableTintList(ColorStateList.valueOf(c));
-        like.setCompoundDrawablePadding(dp(6));
-        like.setContentDescription((p.liked ? "Unlike. " : "Like. ") + p.likes + " likes");
+    // ----------------------------------------------------
+    // DELETE POST
+    // ----------------------------------------------------
 
-        comment.setText(String.valueOf(p.comments));
-        comment.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_comment, 0, 0, 0);
-        comment.setCompoundDrawableTintList(ColorStateList.valueOf(requireContext().getColor(R.color.navy)));
-        comment.setCompoundDrawablePadding(dp(6));
-        comment.setContentDescription("Comments. " + p.comments + " comments");
-    }
+    private void confirmDeletePost(String postId) {
 
-    private void confirmDeletePost(final FeedModels.Post p) {
         new AlertDialog.Builder(requireContext())
                 .setTitle("Delete post?")
-                .setMessage("This also removes its comments.")
+                .setMessage(
+                        "This post and all its comments will be deleted."
+                )
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton("Delete", (d, w) -> {
-                    final Context app = requireContext().getApplicationContext();
-                    Net.bg(() -> {
-                        final ApiClient.Result res = ApiClient.send(app, "DELETE", "/posts/" + p.id, null);
-                        Net.main(() -> {
-                            if (!isAdded()) return;
-                            if (!res.ok()) toast(errorText(res));
-                            loadPosts();
-                        });
-                    });
-                })
+                .setPositiveButton("Delete", (dialog, which) ->
+                        deletePost(postId)
+                )
                 .show();
     }
 
-    // ---------- Comments, replies and deleting your own comments ----------
-    private void showComments(final FeedModels.Post p, final TextView like, final TextView commentBtn) {
-        View dv = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_comments, null);
-        dlgList = dv.findViewById(R.id.commentList);
-        dlgNone = dv.findViewById(R.id.tvNoComments);
-        dlgInput = dv.findViewById(R.id.etComment);
-        dlgReplying = dv.findViewById(R.id.tvReplyingTo);
-        dlgPostId = p.id;
-        dlgCount = p.comments;
-        replyParent = "";
-        dlgReplying.setVisibility(View.GONE);
-        dlgReplying.setOnClickListener(x -> cancelReply());
-        dlgNone.setVisibility(View.GONE);
-        loadComments();
+    private void deletePost(String postId) {
 
-        dv.findViewById(R.id.tvSend).setOnClickListener(x -> {
-            final String t = dlgInput.getText().toString().trim();
-            if (t.isEmpty()) {
-                dlgInput.setError("Write a comment first.");
-                return;
-            }
-            if (t.length() > MAX_COMMENT) {
-                dlgInput.setError("Please keep comments under 300 characters.");
-                return;
-            }
-            final Context app = requireContext().getApplicationContext();
-            final String parent = replyParent;
-            final String postId = dlgPostId;
-            Net.bg(() -> {
-                JSONObject body = new JSONObject();
-                try {
-                    body.put("text", t);
-                    if (!parent.isEmpty()) body.put("parentId", parent);
-                } catch (JSONException ignored) {
-                    // cannot happen
-                }
-                final ApiClient.Result res = ApiClient.send(app, "POST", "/posts/" + postId + "/comments", body);
-                Net.main(() -> {
-                    if (!isAdded() || dlgInput == null) return;
-                    if (!res.ok()) {
-                        toast(errorText(res));
-                        return;
-                    }
-                    dlgInput.setText("");
-                    cancelReply();
-                    loadComments();
-                });
-            });
-        });
+        JSONArray oldPosts = getPosts();
+        JSONArray updated = new JSONArray();
 
-        AlertDialog d = new AlertDialog.Builder(requireContext())
-                .setTitle("Comments")
-                .setView(dv)
-                .setPositiveButton("Close", null)
-                .create();
-        d.setOnDismissListener(x -> {
-            replyParent = "";
-            p.comments = dlgCount;
-            if (isAdded()) bindCounts(p, like, commentBtn);
-        });
-        d.show();
-    }
+        String photoToDelete = "";
 
-    private void cancelReply() {
-        replyParent = "";
-        if (dlgReplying != null) dlgReplying.setVisibility(View.GONE);
-    }
+        for (int i = 0; i < oldPosts.length(); i++) {
 
-    private void loadComments() {
-        final Context app = requireContext().getApplicationContext();
-        final String postId = dlgPostId;
-        Net.bg(() -> {
-            final ApiClient.Result res = ApiClient.get(app, "/posts/" + postId + "/comments");
-            final List<FeedModels.Comment> list = new ArrayList<>();
-            if (res.ok() && res.json != null) {
-                JSONArray a = res.json.optJSONArray("comments");
-                if (a != null) {
-                    for (int i = 0; i < a.length(); i++) {
-                        JSONObject o = a.optJSONObject(i);
-                        if (o != null) list.add(FeedModels.Comment.from(o));
-                    }
-                }
-            }
-            Net.main(() -> {
-                if (!isAdded() || dlgList == null) return;
-                if (!res.ok()) {
-                    toast(errorText(res));
-                    return;
-                }
-                renderComments(list);
-            });
-        });
-    }
+            JSONObject post = oldPosts.optJSONObject(i);
 
-    private void renderComments(List<FeedModels.Comment> all) {
-        dlgCount = all.size();
-        dlgList.removeAllViews();
-        dlgNone.setVisibility(all.isEmpty() ? View.VISIBLE : View.GONE);
-        for (FeedModels.Comment c : all) {
-            if (!c.parentId.isEmpty()) continue;
-            dlgList.addView(commentRow(c, false));
-            for (FeedModels.Comment r : all) {
-                if (r.parentId.equals(c.id)) dlgList.addView(commentRow(r, true));
+            if (post == null) continue;
+
+            if (postId.equals(post.optString("id"))) {
+                photoToDelete = post.optString("photo", "");
+            } else {
+                updated.put(post);
             }
         }
-    }
 
-    private View commentRow(final FeedModels.Comment c, boolean isReply) {
-        LinearLayout row = new LinearLayout(requireContext());
-        row.setOrientation(LinearLayout.VERTICAL);
-        row.setPadding(isReply ? dp(24) : 0, dp(8), 0, 0);
+        savePosts(updated);
 
-        TextView meta = new TextView(requireContext());
-        meta.setText((c.mine ? "You" : "Anonymous student") + " · " + timeAgo(c.createdAt));
-        meta.setTextSize(12);
-        meta.setTextColor(requireContext().getColor(R.color.muted));
-
-        TextView body = new TextView(requireContext());
-        body.setText(c.text);
-        body.setTextSize(15);
-        body.setTextColor(requireContext().getColor(R.color.ink));
-
-        LinearLayout actions = new LinearLayout(requireContext());
-        actions.setOrientation(LinearLayout.HORIZONTAL);
-
-        if (!isReply) {
-            TextView reply = actionText("Reply", R.color.navy);
-            reply.setOnClickListener(x -> {
-                replyParent = c.id;
-                dlgReplying.setText("Replying to " + (c.mine ? "your comment" : "Anonymous student")
-                        + " · tap to cancel");
-                dlgReplying.setVisibility(View.VISIBLE);
-                dlgInput.requestFocus();
-            });
-            actions.addView(reply);
-        }
-        if (c.mine) {
-            TextView del = actionText("Delete", R.color.red);
-            del.setOnClickListener(x -> confirmDeleteComment(c));
-            actions.addView(del);
+        if (!photoToDelete.isEmpty()) {
+            deleteOwnedPhoto(photoToDelete);
         }
 
-        row.addView(meta);
-        row.addView(body);
-        row.addView(actions);
-        return row;
+        displayPosts();
+        toast("Post deleted.");
     }
 
-    private TextView actionText(String label, int colorRes) {
-        TextView t = new TextView(requireContext());
-        t.setText(label);
-        t.setTextSize(13);
-        t.setTypeface(null, Typeface.BOLD);
-        t.setTextColor(requireContext().getColor(colorRes));
-        t.setMinHeight(dp(48));
-        t.setGravity(Gravity.CENTER_VERTICAL);
-        t.setPadding(0, 0, dp(20), 0);
-        t.setClickable(true);
-        t.setFocusable(true);
-        t.setContentDescription(label + " comment");
-        return t;
-    }
+    // ----------------------------------------------------
+    // PHOTO PICKER
+    // ----------------------------------------------------
 
-    private void confirmDeleteComment(final FeedModels.Comment c) {
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Delete comment?")
-                .setMessage("Any replies under it are removed too.")
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Delete", (d, w) -> {
-                    final Context app = requireContext().getApplicationContext();
-                    Net.bg(() -> {
-                        final ApiClient.Result res = ApiClient.send(app, "DELETE", "/posts/comments/" + c.id, null);
-                        Net.main(() -> {
-                            if (!isAdded()) return;
-                            if (!res.ok()) {
-                                toast(errorText(res));
-                                return;
-                            }
-                            if (replyParent.equals(c.id)) cancelReply();
-                            loadComments();
-                        });
-                    });
-                })
-                .show();
-    }
+    private void handleSelectedPhoto(Uri uri) {
 
-    // ---------- Photo for a post ----------
-    private void onImagePicked(Uri uri) {
-        if (uri == null || getView() == null) return;
+        if (uri == null || getContext() == null) return;
+
         try {
-            if (querySize(uri) > MAX_PHOTO_BYTES) {
-                toast("That photo is too large. The limit is 5 MB.");
-                return;
+            File directory = new File(
+                    requireContext().getFilesDir(),
+                    "feed_photos"
+            );
+
+            if (!directory.exists() && !directory.mkdirs()) {
+                throw new Exception("Unable to create photo folder.");
             }
-            File dir = new File(requireContext().getFilesDir(), "feed");
-            dir.mkdirs();
-            File out = new File(dir, "post_" + System.currentTimeMillis() + ".jpg");
-            try (InputStream in = requireContext().getContentResolver().openInputStream(uri);
-                 OutputStream os = new FileOutputStream(out)) {
-                if (in == null) throw new IllegalStateException("No stream");
-                byte[] buf = new byte[8192];
-                int n;
-                while ((n = in.read(buf)) > 0) os.write(buf, 0, n);
+
+            File file = new File(
+                    directory,
+                    UUID.randomUUID().toString() + ".jpg"
+            );
+
+            try (InputStream input =
+                         requireContext().getContentResolver()
+                                 .openInputStream(uri);
+                 FileOutputStream output =
+                         new FileOutputStream(file)) {
+
+                if (input == null) {
+                    throw new Exception("Unable to open photo.");
+                }
+
+                byte[] buffer = new byte[8192];
+                int bytes;
+                long total = 0;
+
+                while ((bytes = input.read(buffer)) != -1) {
+
+                    total += bytes;
+
+                    if (total > MAX_PHOTO_BYTES) {
+                        throw new Exception("Photo exceeds 5 MB.");
+                    }
+
+                    output.write(buffer, 0, bytes);
+                }
+
+            } catch (Exception e) {
+                file.delete();
+                throw e;
             }
-            if (out.length() > MAX_PHOTO_BYTES) {
-                out.delete();
-                toast("That photo is too large. The limit is 5 MB.");
-                return;
+
+            BitmapFactory.Options options =
+                    new BitmapFactory.Options();
+
+            options.inSampleSize = 4;
+
+            Bitmap bitmap = BitmapFactory.decodeFile(
+                    file.getAbsolutePath(),
+                    options
+            );
+
+            if (bitmap == null) {
+                file.delete();
+                throw new Exception("Invalid photo.");
             }
-            BitmapFactory.Options o = new BitmapFactory.Options();
-            o.inSampleSize = 4; // keeps memory use low
-            Bitmap b = BitmapFactory.decodeFile(out.getAbsolutePath(), o);
-            if (b == null) {
-                out.delete();
-                toast("That file isn't a valid image.");
-                return;
+
+            // Delete a previous unsent selection.
+            if (selectedPhotoPath != null) {
+                deleteOwnedPhoto(selectedPhotoPath);
             }
-            if (photoPath != null) new File(photoPath).delete();
-            photoPath = out.getAbsolutePath();
-            ivPreview.setImageBitmap(b);
+
+            selectedPhotoPath = file.getAbsolutePath();
+
+            ivPreview.setImageBitmap(bitmap);
             ivPreview.setVisibility(View.VISIBLE);
             tvAddPhoto.setText("Change photo");
+
         } catch (Exception e) {
-            Log.e(TAG, "Photo failed", e);
-            toast("Couldn't load that photo. Please try another.");
+            toast("Unable to add photo. Use an image under 5 MB.");
         }
     }
 
-    private long querySize(Uri uri) {
-        try (Cursor c = requireContext().getContentResolver().query(uri, null, null, null, null)) {
-            if (c != null && c.moveToFirst()) {
-                int i = c.getColumnIndex(OpenableColumns.SIZE);
-                if (i >= 0 && !c.isNull(i)) return c.getLong(i);
+    private void showPhoto(ImageView image, String path) {
+
+        File file = new File(path);
+
+        if (!file.isFile()) {
+            image.setVisibility(View.GONE);
+            return;
+        }
+
+        BitmapFactory.Options options =
+                new BitmapFactory.Options();
+
+        options.inSampleSize = 4;
+
+        Bitmap bitmap = BitmapFactory.decodeFile(
+                file.getAbsolutePath(),
+                options
+        );
+
+        if (bitmap != null) {
+            image.setImageBitmap(bitmap);
+            image.setVisibility(View.VISIBLE);
+        } else {
+            image.setVisibility(View.GONE);
+        }
+    }
+
+    private void deleteOwnedPhoto(String path) {
+
+        try {
+            File directory = new File(
+                    requireContext().getFilesDir(),
+                    "feed_photos"
+            ).getCanonicalFile();
+
+            File file = new File(path).getCanonicalFile();
+
+            if (file.getParentFile() != null
+                    && file.getParentFile().equals(directory)) {
+                file.delete();
             }
-        } catch (Exception e) {
-            Log.w(TAG, "querySize", e);
+
+        } catch (Exception ignored) {
         }
-        return -1;
     }
 
-    // ---------- Helpers ----------
-    private String errorText(ApiClient.Result r) {
-        return r.offline() ? "You're offline. Please connect to the internet and try again." : r.error;
+    // ----------------------------------------------------
+    // SHARED PREFERENCES STORAGE
+    // ----------------------------------------------------
+
+    private JSONArray getPosts() {
+
+        try {
+            String saved = prefs.getString(POSTS_KEY, "[]");
+            return new JSONArray(saved);
+        } catch (Exception e) {
+            return new JSONArray();
+        }
     }
 
-    private String timeAgo(long ms) {
-        long min = (System.currentTimeMillis() - ms) / 60000L;
-        if (min < 1) return "Just now";
-        if (min < 60) return min + " min ago";
-        long h = min / 60;
-        if (h < 24) return h + " h ago";
-        long d = h / 24;
-        return d + (d == 1 ? " day ago" : " days ago");
+    private void savePosts(JSONArray posts) {
+
+        prefs.edit()
+                .putString(POSTS_KEY, posts.toString())
+                .apply();
     }
 
-    private void toast(String msg) {
-        if (getContext() != null) Toast.makeText(getContext(), msg, Toast.LENGTH_LONG).show();
+    private JSONObject findPost(
+            JSONArray posts, String postId) {
+
+        for (int i = 0; i < posts.length(); i++) {
+
+            JSONObject post = posts.optJSONObject(i);
+
+            if (post != null
+                    && postId.equals(post.optString("id"))) {
+                return post;
+            }
+        }
+
+        return null;
     }
 
-    private int dp(int v) {
-        return (int) (v * getResources().getDisplayMetrics().density);
+    // ----------------------------------------------------
+    // HELPERS
+    // ----------------------------------------------------
+
+    private String timeAgo(long timestamp) {
+
+        long difference = Math.max(
+                0,
+                System.currentTimeMillis() - timestamp
+        );
+
+        long minutes = difference / 60000;
+
+        if (minutes < 1) return "Just now";
+        if (minutes < 60) return minutes + " min ago";
+
+        long hours = minutes / 60;
+
+        if (hours < 24) return hours + " h ago";
+
+        long days = hours / 24;
+
+        return days == 1
+                ? "1 day ago"
+                : days + " days ago";
+    }
+
+    private void toast(String message) {
+
+        if (getContext() != null) {
+            Toast.makeText(
+                    getContext(),
+                    message,
+                    Toast.LENGTH_SHORT
+            ).show();
+        }
+    }
+
+    private int dp(int value) {
+
+        return (int) (
+                value * getResources()
+                        .getDisplayMetrics().density
+        );
+    }
+
+    @Override
+    public void onDestroyView() {
+        etPost = null;
+        ivPreview = null;
+        tvAddPhoto = null;
+        tvPost = null;
+        tvEmpty = null;
+        listContainer = null;
+        super.onDestroyView();
     }
 }
+

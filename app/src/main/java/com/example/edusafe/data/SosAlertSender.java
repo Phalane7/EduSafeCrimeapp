@@ -10,97 +10,216 @@ import android.telephony.SmsManager;
 
 import androidx.core.content.ContextCompat;
 
+import com.example.edusafe.DatabaseHelper;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * SosAlertSender
- * ----------------------------------------------------------------------
- * Does the actual work behind "HOLD FOR HELP": gets the current location,
- * then sends a real SMS (via SmsManager) to every contact in
- * ContactsRepository, in priority order.
- *
- * An alert must never be held up by GPS. If no location arrives within
- * LOCATION_WAIT_MS, the texts go out anyway, without a location.
- * The texts are only ever sent once per sendAlert() call.
- *
- * Needs the SEND_SMS runtime permission; without it nothing is sent and
- * the callback gets an empty list, so the caller can tell the user.
- * ----------------------------------------------------------------------
- */
 public class SosAlertSender {
 
     public interface AlertCallback {
-        /** Called once, on the main thread, with the contacts that were actually texted (possibly none). */
-        void onAlertSent(List<EmergencyContact> notifiedContacts, boolean locationIncluded);
+        void onAlertSent(
+                List<EmergencyContact> notifiedContacts,
+                boolean locationIncluded
+        );
     }
 
-    /** How long to wait for a location before sending without one. */
     private static final long LOCATION_WAIT_MS = 3000L;
 
     private final Context context;
-    private final ContactsRepository contactsRepository;
+    private final DatabaseHelper db;
     private final LocationHelper locationHelper;
 
     public SosAlertSender(Context context) {
+
         this.context = context.getApplicationContext();
-        this.contactsRepository = new ContactsRepository(context);
-        this.locationHelper = new LocationHelper(context);
+
+        // Use the same database as TrustedContactsFragment.
+        this.db = DatabaseHelper.get(this.context);
+
+        this.locationHelper = new LocationHelper(this.context);
     }
+
+    // ----------------------------------------------------
+    // SMS PERMISSION
+    // ----------------------------------------------------
 
     public static boolean hasSmsPermission(Context context) {
-        return ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS)
-                == PackageManager.PERMISSION_GRANTED;
+
+        return ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.SEND_SMS
+        ) == PackageManager.PERMISSION_GRANTED;
     }
 
+    // ----------------------------------------------------
+    // START SOS ALERT
+    // ----------------------------------------------------
+
     public void sendAlert(AlertCallback callback) {
+
         Handler handler = new Handler(Looper.getMainLooper());
+
         AtomicBoolean alreadySent = new AtomicBoolean(false);
 
-        // If no location turns up in time, send without one.
-        Runnable stopWaiting = () -> deliver(null, alreadySent, callback);
+        // If GPS takes too long, send without location.
+        Runnable stopWaiting = () ->
+                deliver(null, alreadySent, callback);
+
         handler.postDelayed(stopWaiting, LOCATION_WAIT_MS);
 
-        locationHelper.getCurrentLocation(location -> {
+        try {
+
+            locationHelper.getCurrentLocation(location -> {
+
+                handler.removeCallbacks(stopWaiting);
+
+                deliver(location, alreadySent, callback);
+            });
+
+        } catch (Exception e) {
+
             handler.removeCallbacks(stopWaiting);
-            deliver(location, alreadySent, callback);
+
+            deliver(null, alreadySent, callback);
+        }
+    }
+
+    // ----------------------------------------------------
+    // SEND ALERT ONCE
+    // ----------------------------------------------------
+
+    private void deliver(
+            Location location,
+            AtomicBoolean alreadySent,
+            AlertCallback callback) {
+
+        // Prevent duplicate SMS messages.
+        if (!alreadySent.compareAndSet(false, true)) {
+            return;
+        }
+
+        String message = buildMessage(location);
+
+        // These are SMS submissions, not confirmed deliveries.
+        List<EmergencyContact> submitted =
+                sendToAllContacts(message);
+
+        new Handler(Looper.getMainLooper()).post(() -> {
+
+            if (callback != null) {
+                callback.onAlertSent(
+                        submitted,
+                        location != null && !submitted.isEmpty()
+                );
+            }
         });
     }
 
-    private void deliver(Location location, AtomicBoolean alreadySent, AlertCallback callback) {
-        if (!alreadySent.compareAndSet(false, true)) return; // a late location must not trigger a second send
-        List<EmergencyContact> notified = sendToAllContacts(buildMessage(location));
-        callback.onAlertSent(notified, location != null);
-    }
+    // ----------------------------------------------------
+    // BUILD SOS MESSAGE
+    // ----------------------------------------------------
 
     private String buildMessage(Location location) {
-        StringBuilder sb = new StringBuilder("EMERGENCY: I need help. This is an automated alert from EduSafe.");
+
+        StringBuilder message = new StringBuilder();
+
+        message.append(
+                "EMERGENCY: I need help. "
+                        + "This is an automated SOS alert from EduSafe."
+        );
+
         if (location != null) {
-            sb.append(" My location: ").append(LocationHelper.toMapsLink(location));
+
+            message.append(" My location: ");
+
+            message.append(
+                    LocationHelper.toMapsLink(location)
+            );
+
         } else {
-            sb.append(" (Location unavailable)");
+
+            message.append(
+                    " Location is currently unavailable."
+            );
         }
-        return sb.toString();
+
+        return message.toString();
     }
 
-    private List<EmergencyContact> sendToAllContacts(String message) {
-        List<EmergencyContact> notified = new ArrayList<>();
+    // ----------------------------------------------------
+    // GET SAVED CONTACTS AND SEND SMS
+    // ----------------------------------------------------
+
+    private List<EmergencyContact> sendToAllContacts(
+            String message) {
+
+        List<EmergencyContact> submitted =
+                new ArrayList<>();
+
         if (!hasSmsPermission(context)) {
-            return notified;
+            return submitted;
+        }
+
+        List<DatabaseHelper.Contact> savedContacts;
+
+        try {
+
+            // Read directly from Trusted Contacts database.
+            savedContacts = db.getContacts();
+
+        } catch (Exception e) {
+
+            return submitted;
         }
 
         SmsManager smsManager = SmsManager.getDefault();
-        for (EmergencyContact contact : contactsRepository.getContacts()) {
+
+        for (DatabaseHelper.Contact contact : savedContacts) {
+
+            if (contact.phone == null
+                    || contact.phone.trim().isEmpty()) {
+                continue;
+            }
+
+            String phone = contact.phone.trim();
+
             try {
-                // divideMessage handles messages longer than one SMS segment safely
-                ArrayList<String> parts = smsManager.divideMessage(message);
-                smsManager.sendMultipartTextMessage(contact.phoneNumber, null, parts, null, null);
-                notified.add(contact);
+
+                ArrayList<String> parts =
+                        smsManager.divideMessage(message);
+
+                if (parts == null || parts.isEmpty()) {
+                    continue;
+                }
+
+                smsManager.sendMultipartTextMessage(
+                        phone,
+                        null,
+                        parts,
+                        null,
+                        null
+                );
+
+                // This only confirms that Android accepted
+                // the send request without throwing an error.
+                // It does NOT confirm SMS delivery.
+                submitted.add(
+                        new EmergencyContact(
+                                contact.name,
+                                phone,
+                                contact.priority
+                        )
+                );
+
             } catch (Exception e) {
-                // Keep going: one bad number must not stop the others from being alerted.
+
+                // Continue attempting other contacts.
             }
         }
-        return notified;
+
+        return submitted;
     }
 }
+

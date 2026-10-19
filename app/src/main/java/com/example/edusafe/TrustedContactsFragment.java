@@ -69,7 +69,7 @@ public class TrustedContactsFragment extends Fragment {
             ((TextView) row.findViewById(R.id.tvName)).setText(contact.name);
 
             String number = contact.phone == null ? "" : contact.phone.trim();
-            boolean configured = !number.isEmpty() && !OLD_PLACEHOLDER_NUMBER.equals(number);
+            boolean configured = !number.isEmpty();
             ((TextView) row.findViewById(R.id.tvPhone))
                     .setText("Emergency: " + (configured ? number : "number not configured"));
             ((TextView) row.findViewById(R.id.tvPriority))
