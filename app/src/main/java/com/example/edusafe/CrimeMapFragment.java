@@ -32,20 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * CrimeMapActivity  (screen 3 of 3)
- * ----------------------------------------------------------------------
- * Lets a student see reported safety incidents around Eduvos Midrand.
- *
- *   - filter chips (All / Robbery / Theft / Assault / Other) show or hide pins
- *   - the search box filters by incident or place name as you type
- *   - the sliders button limits how recent the incidents are
- *   - the layers button switches between satellite and street map
- *   - tapping a pin selects it: the map slides to it and the card updates
- *
- * The incidents are sample data (see IncidentRepository).
- * ----------------------------------------------------------------------
- */
+
 public class CrimeMapFragment extends Fragment {
 
     private final List<Incident> allIncidents = new ArrayList<>(); // Connect to real reports later
@@ -94,9 +81,7 @@ public class CrimeMapFragment extends Fragment {
         applyFilters();
     }
 
-    // ---------------------------------------------------------------
-    // Filtering
-    // ---------------------------------------------------------------
+
 
     private void applyFilters() {
         shown = IncidentRepository.filter(allIncidents, selectedType,
@@ -109,7 +94,7 @@ public class CrimeMapFragment extends Fragment {
         }
         showSelected();
 
-        // slide to the new selection, but not on the very first load (the map already starts on the campus)
+
         if (!firstLoad && selected != null && selected != before) map.centerOn(selected);
         firstLoad = false;
     }
@@ -120,9 +105,7 @@ public class CrimeMapFragment extends Fragment {
         map.centerOn(incident);
     }
 
-    // ---------------------------------------------------------------
-    // The incident card
-    // ---------------------------------------------------------------
+
 
     private void showSelected() {
         if (selected == null) {
@@ -142,9 +125,7 @@ public class CrimeMapFragment extends Fragment {
         incidentReported.setVisibility(View.VISIBLE);
     }
 
-    // ---------------------------------------------------------------
-    // Filter chips
-    // ---------------------------------------------------------------
+
 
     private void setUpChips() {
         chips.put((TextView) root.findViewById(R.id.chipAll), null);
@@ -164,7 +145,7 @@ public class CrimeMapFragment extends Fragment {
         styleChips();
     }
 
-    /** The chosen chip is navy with white text; the others are white with navy text. */
+
     private void styleChips() {
         for (Map.Entry<TextView, IncidentType> entry : chips.entrySet()) {
             boolean on = entry.getValue() == selectedType;
@@ -174,9 +155,7 @@ public class CrimeMapFragment extends Fragment {
         }
     }
 
-    // ---------------------------------------------------------------
-    // Search
-    // ---------------------------------------------------------------
+
 
     private void setUpSearch() {
         searchInput.addTextChangedListener(new TextWatcher() {
@@ -199,9 +178,7 @@ public class CrimeMapFragment extends Fragment {
         searchInput.clearFocus();
     }
 
-    // ---------------------------------------------------------------
-    // The sliders button: how recent?
-    // ---------------------------------------------------------------
+
 
     private void setUpTimeFilter() {
         root.findViewById(R.id.filterButton).setOnClickListener(anchor -> {
@@ -228,9 +205,7 @@ public class CrimeMapFragment extends Fragment {
         });
     }
 
-    // ---------------------------------------------------------------
-    // The layers button: satellite <-> street
-    // ---------------------------------------------------------------
+
 
     private void setUpLayersButton() {
         root.findViewById(R.id.layersButton).setOnClickListener(v -> {
@@ -246,9 +221,7 @@ public class CrimeMapFragment extends Fragment {
                 : "\u00a9 OpenStreetMap contributors");
     }
 
-    // ---------------------------------------------------------------
-    // Map lifecycle
-    // ---------------------------------------------------------------
+
 
     @Override
     public void onResume() {

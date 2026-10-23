@@ -26,15 +26,12 @@ public class CreateNewPasswordActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Initialize Supabase authentication
+
         authRepository = new AuthRepository(this);
 
-        // Keep your existing XML design
+
         setContentView(R.layout.activity_create_new_password);
 
-        // -----------------------------------------
-        // CONNECT XML VIEWS
-        // -----------------------------------------
 
         etNewPassword = findViewById(R.id.etNewPassword);
 
@@ -49,17 +46,13 @@ public class CreateNewPasswordActivity extends AppCompatActivity {
         TextView tvBackToLogin =
                 findViewById(R.id.tvBackToLogin);
 
-        // -----------------------------------------
-        // BACK TO LOGIN
-        // -----------------------------------------
+
 
         tvBackToLogin.setOnClickListener(
                 v -> goToLogin()
         );
 
-        // -----------------------------------------
-        // CHECK RECOVERY SESSION
-        // -----------------------------------------
+
 
         if (!authRepository.hasRecoverySession()) {
 
@@ -76,18 +69,14 @@ public class CreateNewPasswordActivity extends AppCompatActivity {
                 "Enter your new password below."
         );
 
-        // -----------------------------------------
-        // UPDATE PASSWORD BUTTON
-        // -----------------------------------------
+
 
         btnUpdatePassword.setOnClickListener(
                 v -> attemptUpdatePassword()
         );
     }
 
-    // -----------------------------------------
-    // VALIDATE AND UPDATE PASSWORD
-    // -----------------------------------------
+
 
     private void attemptUpdatePassword() {
 
@@ -97,7 +86,7 @@ public class CreateNewPasswordActivity extends AppCompatActivity {
         String confirmPassword =
                 etConfirmPassword.getText().toString();
 
-        // Password must contain at least 8 characters
+
         if (newPassword.length() < 8) {
 
             Toast.makeText(
@@ -109,7 +98,7 @@ public class CreateNewPasswordActivity extends AppCompatActivity {
             return;
         }
 
-        // Check passwords match
+
         if (!newPassword.equals(confirmPassword)) {
 
             tvPasswordError.setVisibility(View.VISIBLE);
@@ -127,9 +116,7 @@ public class CreateNewPasswordActivity extends AppCompatActivity {
 
         btnUpdatePassword.setEnabled(false);
 
-        // -----------------------------------------
-        // UPDATE PASSWORD USING SUPABASE
-        // -----------------------------------------
+
 
         authRepository.updateRecoveredPassword(
                 newPassword,
@@ -163,9 +150,7 @@ public class CreateNewPasswordActivity extends AppCompatActivity {
         );
     }
 
-    // -----------------------------------------
-    // RETURN TO LOGIN SCREEN
-    // -----------------------------------------
+
 
     private void goToLogin() {
 

@@ -30,7 +30,7 @@ import okhttp3.RequestBody;
 import okhttp3.MediaType;
 import okhttp3.Response;
 
-/** Admin-only moderation screen. The database RLS enforces deletion rights. */
+
 public class AdminFeedModerationFragment extends Fragment {
     private final OkHttpClient client = new OkHttpClient();
     private final ExecutorService worker = Executors.newSingleThreadExecutor();

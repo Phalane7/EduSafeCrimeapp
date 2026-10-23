@@ -12,26 +12,7 @@ import android.os.Looper;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-/**
- * LocationHelper
- * ----------------------------------------------------------------------
- * Fetches a real device location using the plain Android LocationManager
- * API — deliberately not Google Play Services' FusedLocationProvider, so
- * this works without adding the play-services-location Gradle dependency.
- *
- * Usage:
- *   if (!LocationHelper.hasLocationPermission(this)) {
- *       ActivityCompat.requestPermissions(this,
- *           new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_CODE);
- *       return;
- *   }
- *   new LocationHelper(this).getCurrentLocation(location -> {
- *       if (location != null) {
- *           String mapsLink = LocationHelper.toMapsLink(location);
- *       }
- *   });
- * ----------------------------------------------------------------------
- */
+
 public class LocationHelper {
 
     public interface LocationCallback {

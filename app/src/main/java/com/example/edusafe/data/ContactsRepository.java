@@ -12,18 +12,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-/**
- * ContactsRepository
- * ----------------------------------------------------------------------
- * Real, persisted storage for emergency contacts — backed by
- * SharedPreferences as a JSON array, so contacts survive app restarts.
- * No network/database needed for this to work standalone.
- *
- * On first run it seeds the three contacts from the brief
- * (Campus Security as Priority 1, Parent / Guardian, Trusted Friend). After
- * that, callers can add/remove their own.
- * ----------------------------------------------------------------------
- */
+
 public class ContactsRepository {
 
     private static final String PREFS_NAME = "edusafe_contacts";

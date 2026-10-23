@@ -31,13 +31,10 @@ public class AuthRepository {
 
     private final SharedPreferences sessionPrefs;
 
-    // Temporary recovery token shared across repository instances.
-    // It is kept in memory only and is cleared after successful use.
+
     private static String recoveryAccessToken;
 
-    // ------------------------------------------
-    // CONSTRUCTOR
-    // ------------------------------------------
+
 
     public AuthRepository(Context context) {
 
@@ -48,9 +45,7 @@ public class AuthRepository {
                 );
     }
 
-    // ------------------------------------------
-    // SUPABASE POST REQUEST
-    // ------------------------------------------
+
 
     private void request(
             String endpoint,
@@ -158,9 +153,7 @@ public class AuthRepository {
         });
     }
 
-    // ------------------------------------------
-    // SAVE LOGIN SESSION
-    // ------------------------------------------
+
 
     private void saveSession(JSONObject result) {
 
@@ -193,9 +186,7 @@ public class AuthRepository {
                 .apply();
     }
 
-    // ------------------------------------------
-    // CHECK LOGIN SESSION
-    // ------------------------------------------
+
 
     public boolean hasValidSession() {
 
@@ -216,9 +207,7 @@ public class AuthRepository {
                 && System.currentTimeMillis() < expiresAt;
     }
 
-    // ------------------------------------------
-    // LOG OUT
-    // ------------------------------------------
+
 
     public void clearSession() {
 
@@ -229,9 +218,7 @@ public class AuthRepository {
         recoveryAccessToken = null;
     }
 
-    // ------------------------------------------
-    // REGISTER STUDENT
-    // ------------------------------------------
+
 
     public void signUp(
             String firstName,
@@ -292,17 +279,14 @@ public class AuthRepository {
         }
     }
 
-    // ------------------------------------------
-    // LOGIN STUDENT
-    // ------------------------------------------
+
 
     public void logIn(
             String email,
             String password,
             AuthCallback<Void> callback) {
 
-        // Staff can use their assigned email addresses.
-        // Student sign-up remains restricted to @vossie.net.
+
         if (email == null || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             callback.onError("Please enter a valid email address.");
             return;
@@ -353,9 +337,7 @@ public class AuthRepository {
         }
     }
 
-    // ------------------------------------------
-    // VERIFY REGISTRATION OTP
-    // ------------------------------------------
+
 
     public void verifySignUpCode(
             String email,
@@ -378,8 +360,7 @@ public class AuthRepository {
                         @Override
                         public void onSuccess(JSONObject result) {
 
-                            // Registration verified.
-                            // Student logs in separately.
+
                             callback.onSuccess(null);
                         }
 
@@ -399,9 +380,7 @@ public class AuthRepository {
         }
     }
 
-    // ------------------------------------------
-    // RESEND REGISTRATION OTP
-    // ------------------------------------------
+
 
     public void resendSignUpCode(
             String email,
@@ -441,9 +420,7 @@ public class AuthRepository {
         }
     }
 
-    // ------------------------------------------
-    // SEND PASSWORD RESET OTP
-    // ------------------------------------------
+
 
     public void sendPasswordResetCode(
             String email,
@@ -495,9 +472,7 @@ public class AuthRepository {
         }
     }
 
-    // ------------------------------------------
-    // VERIFY PASSWORD RECOVERY OTP
-    // ------------------------------------------
+
 
     public void verifyPasswordResetCode(
             String email,
@@ -536,8 +511,7 @@ public class AuthRepository {
                                 return;
                             }
 
-                            // Store recovery token in memory.
-                            // Do not store it in Intent extras.
+
                             recoveryAccessToken = token;
 
                             callback.onSuccess(null);
@@ -560,9 +534,7 @@ public class AuthRepository {
         }
     }
 
-    // ------------------------------------------
-    // CHECK RECOVERY SESSION
-    // ------------------------------------------
+
 
     public boolean hasRecoverySession() {
 
@@ -570,9 +542,7 @@ public class AuthRepository {
                 && !recoveryAccessToken.isEmpty();
     }
 
-    // ------------------------------------------
-    // UPDATE RECOVERED PASSWORD
-    // ------------------------------------------
+
 
     public void updateRecoveredPassword(
             String newPassword,
@@ -597,7 +567,7 @@ public class AuthRepository {
             return;
         }
 
-        // Keep a local reference for this request.
+
         String token = recoveryAccessToken;
 
         try {
@@ -687,18 +657,14 @@ public class AuthRepository {
         }
     }
 
-    // ------------------------------------------
-    // CLEAR RECOVERY SESSION
-    // ------------------------------------------
+
 
     public void clearRecoverySession() {
 
         recoveryAccessToken = null;
     }
 
-    // ------------------------------------------
-    // OLD METHOD COMPATIBILITY
-    // ------------------------------------------
+
 
     public void resetPasswordWithCode(
             String email,
@@ -706,10 +672,7 @@ public class AuthRepository {
             String newPassword,
             AuthCallback<Void> callback) {
 
-        // Do not verify the same OTP again.
-        // Supabase recovery OTPs are single-use.
-        // Verify the code first, then use the
-        // authenticated recovery session.
+
 
         updateRecoveredPassword(
                 newPassword,
@@ -717,9 +680,7 @@ public class AuthRepository {
         );
     }
 
-    // ------------------------------------------
-    // LOOK UP THE SIGNED-IN USER'S ROLE
-    // ------------------------------------------
+
 
     public void getUserRole(AuthCallback<String> callback) {
 
@@ -729,8 +690,7 @@ public class AuthRepository {
             return;
         }
 
-        // RLS limits this query to the current user's own role.
-        // No user ID is accepted from the caller.
+
         Request request = new Request.Builder()
                 .url(SupabaseConfig.SUPABASE_URL
                         + "/rest/v1/user_roles?select=role,is_banned")

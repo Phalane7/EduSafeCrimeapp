@@ -23,7 +23,7 @@ import okhttp3.Response;
 /** Reads the signed-in student's active SOS from Supabase (RLS enforces ownership). */
 public final class SosActiveLookup {
     public interface ResultCallback {
-        /** Called on the main thread. error is null on a successful lookup, even if alert is null. */
+
         void onResult(Alert alert, String error);
     }
 

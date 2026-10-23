@@ -98,7 +98,7 @@ public class ApiClient {
         return call(ctx, "POST", path, null, mp, true);
     }
 
-    // ---------- Internals ----------
+
     private static Result call(Context ctx, String method, String path, JSONObject body, Multipart mp, boolean auth) {
         if (auth && Session.token(ctx) == null && !login(ctx)) {
             Result r = new Result();
@@ -110,7 +110,7 @@ public class ApiClient {
         return r;
     }
 
-    // Logs this phone in, creating an anonymous account the first time
+
     private static synchronized boolean login(Context ctx) {
         try {
             String email = Session.email(ctx);
@@ -177,7 +177,7 @@ public class ApiClient {
                 try {
                     res.json = new JSONObject(text);
                 } catch (JSONException ignored) {
-                    // not JSON
+
                 }
             }
             if (!res.ok()) {
