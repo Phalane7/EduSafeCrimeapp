@@ -8,7 +8,16 @@ import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import android.content.SharedPreferences;
+import java.io.IOException;
 import java.io.File;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -38,49 +47,167 @@ public class SyncManager {
         });
     }
 
-    // Send queued reports
+    private static final OkHttpClient HTTP = new OkHttpClient();
+    private static final MediaType JSON_TYPE = MediaType.get("application/json; charset=utf-8");
+
+    // Supabase Authentication is the source of identity. Never use the publishable key as a user token.
+    private static String token(Context ctx) {
+        SharedPreferences prefs = ctx.getSharedPreferences("edusafe_supabase_session", Context.MODE_PRIVATE);
+        if (System.currentTimeMillis() >= prefs.getLong("expires_at", 0)) return null;
+        String value = prefs.getString("access_token", "");
+        return value == null || value.isEmpty() ? null : value;
+    }
+
+    private static Request.Builder authorized(String endpoint, String jwt) {
+        return new Request.Builder()
+                .url(SupabaseConfig.SUPABASE_URL + endpoint)
+                .header("apikey", SupabaseConfig.SUPABASE_KEY)
+                .header("Authorization", "Bearer " + jwt);
+    }
+
+    private static String getCurrentStudentId(String jwt) throws Exception {
+        Request userRequest = authorized("/auth/v1/user", jwt).get().build();
+        String uid;
+        try (Response response = HTTP.newCall(userRequest).execute()) {
+            if (!response.isSuccessful() || response.body() == null) return null;
+            uid = new JSONObject(response.body().string()).optString("id", "");
+        }
+        if (uid.isEmpty()) return null;
+        // The user_roles RLS policy only returns the signed-in user's role.
+        Request roleRequest = authorized("/rest/v1/user_roles?select=role", jwt).get().build();
+        try (Response response = HTTP.newCall(roleRequest).execute()) {
+            if (!response.isSuccessful() || response.body() == null) return null;
+            JSONArray roles = new JSONArray(response.body().string());
+            if (roles.length() != 1 || !"student".equals(roles.getJSONObject(0).optString("role"))) return null;
+        }
+        return uid;
+    }
+
+    // Upload local reports as the signed-in student. RLS validates ownership and status.
     private static void pushReports(Context ctx) {
-        DatabaseHelper db = DatabaseHelper.get(ctx);
-        for (DatabaseHelper.Report r : db.getPendingReports()) {
-            ApiClient.Multipart mp = new ApiClient.Multipart()
-                    .field("trackingCode", r.trackingCode)
-                    .field("type", r.type)
-                    .field("description", r.description)
-                    .field("locationLabel", r.location)
-                    .field("createdAt", String.valueOf(r.createdAt))
-                    .field("fcmToken", Session.getString(ctx, "fcm_token"));
-            if (r.latitude != null) mp.field("latitude", String.valueOf(r.latitude));
-            if (r.longitude != null) mp.field("longitude", String.valueOf(r.longitude));
-            if (r.photoUri != null && new File(r.photoUri).exists()) {
-                mp.file("media", r.photoUri, r.photoUri.endsWith(".mp4") ? "video/mp4" : "image/jpeg");
+        String jwt = token(ctx);
+        if (jwt == null) return;
+        try {
+            String uid = getCurrentStudentId(jwt);
+            if (uid == null) return;
+            DatabaseHelper db = DatabaseHelper.get(ctx);
+            for (DatabaseHelper.Report r : db.getPendingReports()) {
+                JSONObject report = new JSONObject()
+                        .put("user_id", uid)
+                        .put("tracking_code", r.trackingCode)
+                        .put("type", r.type)
+                        .put("description", r.description)
+                        .put("location", r.location)
+                        .put("status", "Received");
+                if (r.latitude != null) report.put("latitude", r.latitude);
+                if (r.longitude != null) report.put("longitude", r.longitude);
+                // Upload attachment first; do not mark the report synced until both steps succeed.
+                if (r.photoUri != null && !r.photoUri.trim().isEmpty()) {
+                    File file = new File(r.photoUri);
+                    if (!file.isFile()) {
+                        Log.w(TAG, "Report attachment missing locally: " + r.trackingCode);
+                        return;
+                    }
+                    boolean video = r.photoUri.toLowerCase(java.util.Locale.ROOT).endsWith(".mp4");
+                    String ext = video ? ".mp4" : ".jpg";
+                    String mime = video ? "video/mp4" : "image/jpeg";
+                    String storagePath = uid + "/" + r.trackingCode + ext;
+                    if (!uploadReportMedia(jwt, storagePath, file, mime)) {
+                        Log.w(TAG, "Attachment upload deferred: " + r.trackingCode);
+                        return;
+                    }
+                    report.put("media_path", storagePath);
+                    report.put("media_type", mime);
+                }
+                JSONArray payload = new JSONArray().put(report);
+                Request request = authorized("/rest/v1/crime_reports", jwt)
+                        .header("Content-Type", "application/json")
+                        .header("Prefer", "return=minimal")
+                        .post(RequestBody.create(payload.toString(), JSON_TYPE))
+                        .build();
+                try (Response response = HTTP.newCall(request).execute()) {
+                    if (response.isSuccessful()) {
+                        db.markReportSynced(r.id);
+                    } else if (response.code() == 409 && reportExists(jwt, r.trackingCode)) {
+                        // An earlier upload may have succeeded before its acknowledgement was saved.
+                        db.markReportSynced(r.id);
+                    } else {
+                        Log.w(TAG, "Supabase report upload failed for " + r.trackingCode
+                                + " (HTTP " + response.code() + ")");
+                        return;
+                    }
+                }
             }
-            ApiClient.Result res = ApiClient.upload(ctx, "/reports", mp);
-            if (res.ok()) {
-                db.markReportSynced(r.id);
-            } else if (res.offline() || res.code >= 500 || res.code == 401 || res.code == 429) {
-                return; // try again on the next sync
-            } else {
-                Log.w(TAG, "Server rejected report " + r.trackingCode + ": " + res.error);
-            }
+        } catch (Exception e) {
+            Log.w(TAG, "Supabase report sync deferred", e);
         }
     }
 
-    // Pull status changes made by guards (Under Review, Verified, Resolved...)
+
+    // Private Supabase Storage. Same path on retries prevents duplicate attachments.
+    private static boolean uploadReportMedia(String jwt, String storagePath, File file, String mime) {
+        try {
+            Request request = authorized("/storage/v1/object/report-media/" + storagePath, jwt)
+                    .header("Content-Type", mime)
+                    .post(RequestBody.create(file, MediaType.parse(mime)))
+                    .build();
+            try (Response response = HTTP.newCall(request).execute()) {
+                if (response.isSuccessful()) return true;
+                // The previous upload may have worked before the report row was saved.
+                if (response.code() == 409) {
+                    Request check = authorized("/storage/v1/object/report-media/" + storagePath, jwt)
+                            .get().build();
+                    try (Response existing = HTTP.newCall(check).execute()) {
+                        return existing.isSuccessful();
+                    }
+                }
+                Log.w(TAG, "Storage upload HTTP " + response.code());
+                return false;
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Storage upload deferred", e);
+            return false;
+        }
+    }
+
+    private static boolean reportExists(String jwt, String code) throws IOException {
+        String encoded = URLEncoder.encode(code, "UTF-8");
+        Request request = authorized("/rest/v1/crime_reports?select=id&tracking_code=eq." + encoded, jwt)
+                .get().build();
+        try (Response response = HTTP.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) return false;
+            try { return new JSONArray(response.body().string()).length() > 0; }
+            catch (Exception ignored) { return false; }
+        }
+    }
+
+    // Retrieve statuses from Supabase for the signed-in student only.
     private static void refreshStatuses(Context ctx) {
-        DatabaseHelper db = DatabaseHelper.get(ctx);
-        SQLiteDatabase w = db.getWritableDatabase();
-        for (DatabaseHelper.Report r : db.getReports("All")) {
-            if (!"synced".equals(r.syncStatus) || "Resolved".equals(r.status) || "Rejected".equals(r.status)) continue;
-            ApiClient.Result res = ApiClient.get(ctx, "/reports/" + r.trackingCode);
-            if (res.offline()) return;
-            if (res.ok() && res.json != null) {
-                String s = res.json.optString("status", r.status);
-                if (!s.equals(r.status)) {
-                    ContentValues cv = new ContentValues();
-                    cv.put("status", s);
-                    w.update("reports", cv, "tracking_code=?", new String[]{r.trackingCode});
+        String jwt = token(ctx);
+        if (jwt == null) return;
+        try {
+            if (getCurrentStudentId(jwt) == null) return;
+            DatabaseHelper db = DatabaseHelper.get(ctx);
+            SQLiteDatabase writable = db.getWritableDatabase();
+            for (DatabaseHelper.Report r : db.getReports("All")) {
+                if (!"synced".equals(r.syncStatus)) continue;
+                String encoded = URLEncoder.encode(r.trackingCode, "UTF-8");
+                Request request = authorized("/rest/v1/crime_reports?select=status&tracking_code=eq." + encoded, jwt)
+                        .get().build();
+                try (Response response = HTTP.newCall(request).execute()) {
+                    if (!response.isSuccessful() || response.body() == null) return;
+                    JSONArray rows = new JSONArray(response.body().string());
+                    if (rows.length() != 1) continue;
+                    String status = rows.getJSONObject(0).optString("status", r.status);
+                    if (!status.equals(r.status)) {
+                        ContentValues values = new ContentValues();
+                        values.put("status", status);
+                        writable.update("reports", values, "id=?", new String[]{String.valueOf(r.id)});
+                    }
                 }
             }
+        } catch (Exception e) {
+            Log.w(TAG, "Report status refresh deferred", e);
         }
     }
 
@@ -140,3 +267,4 @@ public class SyncManager {
         }
     }
 }
+

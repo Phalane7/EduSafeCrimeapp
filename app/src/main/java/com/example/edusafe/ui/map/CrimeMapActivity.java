@@ -2,6 +2,31 @@ package com.example.edusafe.ui.map;
 
 import android.content.res.ColorStateList;
 import android.os.Bundle;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+import java.util.Locale;
+import java.text.SimpleDateFormat;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
+import androidx.annotation.NonNull;
+import com.example.edusafe.SupabaseConfig;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.IOException;
+import java.time.Instant;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Menu;
@@ -42,13 +67,36 @@ import java.util.Map;
  */
 public class CrimeMapActivity extends AppCompatActivity {
 
-    private final List<Incident> allIncidents = com.example.edusafe.ui.map.IncidentRepository.all();
+    private final List<Incident> allIncidents = new ArrayList<>();
+    private final OkHttpClient client = new OkHttpClient();
+    private final Handler refreshHandler = new Handler(Looper.getMainLooper());
+    private boolean loading = false;
+    private boolean mapActive = false;
+    private final Runnable refreshTask = new Runnable() {
+        @Override public void run() {
+            if (!mapActive) return;
+            loadVerifiedIncidents();
+            refreshHandler.postDelayed(this, 5000L);
+        }
+    };
     private List<Incident> shown = new ArrayList<>();
 
     private IncidentType selectedType = null;          // null means "All"
     private int maxHoursAgo = Integer.MAX_VALUE;       // any time
     private Incident selected;
     private boolean firstLoad = true;
+    private boolean hasLoadedIncidents = false;
+    private boolean warnedAboutSession = false;
+    private static final double CAMPUS_LAT = -26.0207535;
+    private static final double CAMPUS_LON = 28.1336694;
+
+    private static class VerifiedIncident extends Incident {
+        final long reportedAt;
+        VerifiedIncident(IncidentType type, String area, int hours, double lat, double lon, long time) {
+            super(type, type.label + " Reported", area, hours, lat, lon);
+            reportedAt = time;
+        }
+    }
 
     private OsmMapHelper map;
     private EditText searchInput;
@@ -84,6 +132,145 @@ public class CrimeMapActivity extends AppCompatActivity {
         applyFilters();
     }
 
+    // Only public, rounded coordinates are returned by the database function.
+    private void loadVerifiedIncidents() {
+        if (loading) return;
+        SharedPreferences prefs = getSharedPreferences("edusafe_supabase_session", Context.MODE_PRIVATE);
+        String token = prefs.getString("access_token", "");
+        if (token == null || token.isEmpty() || System.currentTimeMillis() >= prefs.getLong("expires_at", 0)) {
+            if (!warnedAboutSession) {
+                warnedAboutSession = true;
+                incidentTitle.setText("Please sign in again");
+                incidentLocation.setText("Your Supabase session is missing or expired.");
+                incidentReported.setVisibility(View.GONE);
+            }
+            return;
+        }
+        warnedAboutSession = false;
+        loading = true;
+        Request request = new Request.Builder()
+                .url(SupabaseConfig.SUPABASE_URL + "/rest/v1/rpc/get_public_map_incidents")
+                .header("apikey", SupabaseConfig.SUPABASE_KEY)
+                .header("Authorization", "Bearer " + token)
+                .get().build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                runOnUiThread(() -> {
+                    loading = false;
+                    showLoadError("Could not connect to Supabase. Check internet.");
+                });
+            }
+            @Override public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                try (Response res = response) {
+                    if (!res.isSuccessful()) {
+                        int code = res.code();
+                        runOnUiThread(() -> {
+                            loading = false;
+                            showLoadError("Map request failed (HTTP " + code + "). Check login and RPC permissions.");
+                        });
+                        return;
+                    }
+                    JSONArray rows = new JSONArray(res.body() == null ? "[]" : res.body().string());
+                    List<Incident> fresh = new ArrayList<>();
+                    for (int i = 0; i < rows.length(); i++) {
+                        JSONObject row = rows.getJSONObject(i);
+                        IncidentType type;
+                        try { type = IncidentType.valueOf(row.getString("incident_type").toUpperCase(java.util.Locale.US)); }
+                        catch (Exception ignored) { type = IncidentType.OTHER; }
+                        long created;
+                        try { created = OffsetDateTime.parse(row.getString("created_at")).toInstant().toEpochMilli(); }
+                        catch (Exception ignored) { created = System.currentTimeMillis(); }
+                        int hours = (int) Math.min(Integer.MAX_VALUE,
+                                Math.max(0L, (System.currentTimeMillis() - created) / 3600000L));
+                        double lat = row.getDouble("latitude");
+                        double lon = row.getDouble("longitude");
+                        fresh.add(new VerifiedIncident(type, approximateArea(lat, lon),
+                                hours, lat, lon, created));
+                    }
+                    runOnUiThread(() -> {
+                        loading = false;
+                        if (isFinishing() || isDestroyed()) return;
+                        // Preserve selection across refreshes, rather than jumping every 5 seconds.
+                        VerifiedIncident previous = selected instanceof VerifiedIncident
+                                ? (VerifiedIncident) selected : null;
+                        allIncidents.clear();
+                        allIncidents.addAll(fresh);
+                        selected = null;
+                        if (previous != null) {
+                            for (Incident candidate : fresh) {
+                                VerifiedIncident next = (VerifiedIncident) candidate;
+                                if (next.reportedAt == previous.reportedAt
+                                        && next.latitude == previous.latitude
+                                        && next.longitude == previous.longitude
+                                        && next.type == previous.type) {
+                                    selected = next;
+                                    break;
+                                }
+                            }
+                        }
+                        boolean initialData = !hasLoadedIncidents;
+                        hasLoadedIncidents = true;
+                        applyFilters();
+                        // Keep the initial map centered on campus; do not automatically
+                        // fly to an unrelated test incident in California.
+                        if (initialData) firstLoad = false;
+                    });
+                } catch (Exception e) {
+                    runOnUiThread(() -> {
+                        loading = false;
+                        showLoadError("Could not read incident data.");
+                    });
+                }
+            }
+        });
+    }
+
+    private void showLoadError(String message) {
+        if (!hasLoadedIncidents) {
+            incidentTitle.setText("Unable to load incidents");
+            incidentLocation.setText(message);
+            incidentReported.setVisibility(View.GONE);
+        }
+    }
+
+    private String approximateArea(double lat, double lon) {
+        float[] result = new float[1];
+        Location.distanceBetween(lat, lon, CAMPUS_LAT, CAMPUS_LON, result);
+        if (result[0] <= 2000) return "Near Eduvos Campus (approximate)";
+        return String.format(Locale.US, "Approximate area: %.3f, %.3f", lat, lon);
+    }
+
+    private String distanceFromStudent(Incident incident) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            return "Distance unavailable (location permission needed)";
+        }
+        try {
+            LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            if (manager == null) return "Distance unavailable";
+            Location best = null;
+            for (String provider : manager.getProviders(true)) {
+                Location location = manager.getLastKnownLocation(provider);
+                if (location != null && (best == null || location.getTime() > best.getTime())) {
+                    best = location;
+                }
+            }
+            if (best == null || System.currentTimeMillis() - best.getTime() > 10 * 60 * 1000L)
+                return "Distance unavailable (waiting for GPS)";
+            float[] distance = new float[1];
+            Location.distanceBetween(best.getLatitude(), best.getLongitude(),
+                    incident.latitude, incident.longitude, distance);
+            if (distance[0] < 1000)
+                return Math.round(distance[0] / 100f) * 100 + " m away (approx.)";
+            return String.format(Locale.getDefault(), "%.1f km away (approx.)",
+                    distance[0] / 1000.0);
+        } catch (SecurityException | IllegalArgumentException e) {
+            return "Distance unavailable";
+        }
+    }
+
     // ---------------------------------------------------------------
     // Filtering
     // ---------------------------------------------------------------
@@ -100,7 +287,8 @@ public class CrimeMapActivity extends AppCompatActivity {
         showSelected();
 
         // slide to the new selection, but not on the very first load (the map already starts on the campus)
-        if (!firstLoad && selected != null && selected != before) map.centerOn(selected);
+        // Move the map only when the student taps a pin, not during polling.
+        // An incident may be thousands of kilometres from the campus.
         firstLoad = false;
     }
 
@@ -127,8 +315,16 @@ public class CrimeMapActivity extends AppCompatActivity {
         incidentIcon.setBackgroundTintList(
                 ColorStateList.valueOf(ContextCompat.getColor(this, selected.type.colorRes)));
         incidentTitle.setText(selected.title);
-        incidentLocation.setText(selected.location);
-        incidentReported.setText(selected.reportedText());
+        incidentLocation.setText(selected.location + "\n" + distanceFromStudent(selected));
+        if (selected instanceof VerifiedIncident) {
+            long time = ((VerifiedIncident) selected).reportedAt;
+            String day = android.text.format.DateUtils.isToday(time) ? "Today"
+                    : new SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(new Date(time));
+            String clock = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date(time));
+            incidentReported.setText(day + " at " + clock + "  •  Verified by Campus Security");
+        } else {
+            incidentReported.setText(selected.reportedText());
+        }
         incidentReported.setVisibility(View.VISIBLE);
     }
 
@@ -244,17 +440,23 @@ public class CrimeMapActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         map.onResume();
+        mapActive = true;
+        refreshHandler.removeCallbacks(refreshTask);
+        refreshTask.run();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        mapActive = false;
+        refreshHandler.removeCallbacks(refreshTask);
         map.onPause();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        refreshHandler.removeCallbacks(refreshTask);
         map.onDestroy();
     }
 }

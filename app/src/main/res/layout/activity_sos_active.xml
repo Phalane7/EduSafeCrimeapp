@@ -20,13 +20,28 @@
         android:paddingEnd="36dp"
         android:paddingBottom="24dp">
 
-        <!-- header: pulsing dot + SOS ACTIVE on the left, bell on the right -->
+        <!-- header: pulsing dot + SOS ACTIVE, notification bell removed -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
+
+            <!-- Google Material icon: Arrow Back iOS -->
+            <ImageView
+                android:id="@+id/backArrow"
+                android:layout_width="40dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="-10dp"
+                android:layout_marginEnd="4dp"
+                android:padding="12dp"
+                android:src="@drawable/ic_arrow_back_ios"
+                android:tint="@color/white"
+                android:contentDescription="Back to Emergency SOS"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true" />
 
             <View
                 android:id="@+id/liveDot"
@@ -48,21 +63,6 @@
                 android:layout_width="0dp"
                 android:layout_height="1dp"
                 android:layout_weight="1" />
-
-            <FrameLayout
-                android:id="@+id/notificationsButton"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginEnd="-8dp"
-                android:background="?attr/selectableItemBackgroundBorderless">
-
-                <ImageView
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:layout_gravity="center"
-                    android:contentDescription="Notifications"
-                    android:src="@drawable/ic_bell" />
-            </FrameLayout>
         </LinearLayout>
 
         <!-- big white circle with a check -->
@@ -258,7 +258,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="011 111 2222"
+                    android:text="071 324 7336"
                     android:textColor="@color/muted_pink_text"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -266,3 +266,4 @@
 
     </LinearLayout>
 </ScrollView>
+

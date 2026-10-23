@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="#E9F0FF" android:fillViewport="true" android:clipToPadding="false">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:paddingStart="18dp" android:paddingEnd="18dp"
+        android:paddingTop="24dp" android:paddingBottom="28dp">
+        <TextView android:id="@+id/tvSosHistoryHeading" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="My SOS Alert History"
+            android:textColor="#0B1E49" android:textStyle="bold" android:textSize="24sp" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="5dp" android:text="Your past emergencies and their latest status."
+            android:textColor="#657795" android:textSize="13sp" />
+        <TextView android:id="@+id/tvSosHistoryMessage" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="16dp"
+            android:text="Loading your SOS alerts..." android:textColor="#657795" android:textSize="14sp" />
+        <LinearLayout android:id="@+id/sosHistoryContainer" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="18dp"
+            android:orientation="vertical" />
+    </LinearLayout>
+</ScrollView>

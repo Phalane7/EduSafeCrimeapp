@@ -2,10 +2,10 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
-    android:background="@drawable/bg_card"
+    android:layout_marginBottom="14dp"
+    android:background="@drawable/ui4_white_card"
     android:orientation="vertical"
-    android:padding="14dp">
+    android:padding="16dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -95,6 +95,8 @@
             android:minWidth="64dp"
             android:minHeight="48dp"
             android:text="Delete"
+            android:background="@drawable/ui4_soft_pink"
+            android:paddingHorizontal="12dp"
             android:textColor="@color/red"
             android:textSize="14sp"
             android:textStyle="bold"

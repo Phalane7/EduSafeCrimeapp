@@ -1,84 +1,79 @@
-<?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/light_blue"
-    android:fillViewport="true">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:paddingBottom="24dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="SECURITY DASHBOARD"
-            android:textColor="@color/ink"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="Incident submissions · local staff view"
-            android:textColor="@color/muted"
-            android:textSize="13sp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal">
-            <LinearLayout style="@style/StatCard" android:layout_marginEnd="6dp">
-                <TextView android:id="@+id/tvTotal" style="@style/StatValue" android:text="0" />
-                <TextView style="@style/StatLabel" android:text="Total" />
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#E9F1FF" android:fillViewport="true" android:clipToPadding="false">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingBottom="26dp">
+        <LinearLayout android:id="@+id/dashboardHomeContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/edusafe_security_header" android:padding="20dp" android:paddingTop="26dp" android:paddingBottom="30dp" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="● Live crime reports · Security staff" android:textColor="#A9C6FF" android:textSize="11sp"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Security Dashboard" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="26sp"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Monitor reports and respond to emergencies" android:textColor="#C7D7F5" android:textSize="12sp"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="22dp">
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="82dp" android:orientation="vertical" android:gravity="center_vertical" android:padding="10dp" android:background="@drawable/edusafe_stat_bg" android:layout_marginEnd="5dp">
+                        <TextView android:id="@+id/tvTotal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#FFFFFF" android:textSize="27sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Total reports" android:textColor="#D8E5FF" android:textSize="10sp"/>
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="82dp" android:orientation="vertical" android:gravity="center_vertical" android:padding="10dp" android:background="@drawable/edusafe_stat_bg" android:layout_marginHorizontal="3dp">
+                        <TextView android:id="@+id/tvReceived" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#FFFFFF" android:textSize="27sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Received" android:textColor="#D8E5FF" android:textSize="10sp"/>
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="82dp" android:orientation="vertical" android:gravity="center_vertical" android:padding="10dp" android:background="@drawable/edusafe_stat_bg" android:layout_marginHorizontal="3dp">
+                        <TextView android:id="@+id/tvReview" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#FFFFFF" android:textSize="27sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="In review" android:textColor="#D8E5FF" android:textSize="10sp"/>
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="82dp" android:orientation="vertical" android:gravity="center_vertical" android:padding="10dp" android:background="@drawable/edusafe_stat_bg" android:layout_marginStart="5dp">
+                        <TextView android:id="@+id/tvResolved" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#FFFFFF" android:textSize="27sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Verified" android:textColor="#D8E5FF" android:textSize="10sp"/>
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
-            <LinearLayout style="@style/StatCard" android:layout_marginHorizontal="3dp">
-                <TextView android:id="@+id/tvReceived" style="@style/StatValue" android:text="0" />
-                <TextView style="@style/StatLabel" android:text="Received" />
-            </LinearLayout>
-            <LinearLayout style="@style/StatCard" android:layout_marginHorizontal="3dp">
-                <TextView android:id="@+id/tvReview" style="@style/StatValue" android:text="0" />
-                <TextView style="@style/StatLabel" android:text="Review" />
-            </LinearLayout>
-            <LinearLayout style="@style/StatCard" android:layout_marginStart="6dp">
-                <TextView android:id="@+id/tvResolved" style="@style/StatValue" android:text="0" />
-                <TextView style="@style/StatLabel" android:text="Resolved" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="-12dp" android:paddingStart="16dp" android:paddingEnd="16dp" android:orientation="vertical">
+                <LinearLayout android:id="@+id/sosSummaryCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="80dp" android:orientation="horizontal" android:gravity="center_vertical" android:padding="14dp" android:background="@drawable/edusafe_sos_card" android:clickable="true" android:focusable="true" android:contentDescription="View active SOS alerts">
+                    <TextView android:layout_width="42dp" android:layout_height="42dp" android:gravity="center" android:text="!" android:textStyle="bold" android:textSize="25sp" android:textColor="#FFFFFF" android:background="@drawable/edusafe_sos_icon"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="12dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Active SOS alerts" android:textStyle="bold" android:textSize="16sp" android:textColor="#0B1E49"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tap to view emergencies" android:textSize="12sp" android:textColor="#657795" android:layout_marginTop="3dp"/>
+                    </LinearLayout>
+                    <TextView android:id="@+id/sosCountText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textSize="17sp" android:textStyle="bold" android:textColor="#D71952"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=" ›" android:textColor="#D71952" android:textSize="26sp"/>
+                </LinearLayout>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="CRIME CATEGORIES" android:textStyle="bold" android:letterSpacing="0.08" android:textSize="12sp" android:textColor="#253B65"/>
+                <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="9dp" android:scrollbars="none">
+                    <LinearLayout android:id="@+id/categoryRow" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal"/>
+                </HorizontalScrollView>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="23dp" android:text="REPORTED INCIDENTS" android:textStyle="bold" android:letterSpacing="0.08" android:textSize="12sp" android:textColor="#253B65"/>
+                <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:scrollbars="none">
+                    <LinearLayout android:id="@+id/filterRow" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal"/>
+                </HorizontalScrollView>
+                <LinearLayout android:id="@+id/listContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="8dp"/>
+                <TextView android:id="@+id/tvEmpty" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:padding="24dp" android:text="No crime reports match your selection." android:textColor="#657795" android:textSize="14sp" android:visibility="gone"/>
             </LinearLayout>
         </LinearLayout>
-
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:fillViewport="false"
-            android:scrollbars="none">
-            <LinearLayout
-                android:id="@+id/filterRow"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal" />
-        </HorizontalScrollView>
-
-        <LinearLayout
-            android:id="@+id/listContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
-
-        <TextView
-            android:id="@+id/tvEmpty"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:padding="24dp"
-            android:text="No incident submissions on this device yet."
-            android:textColor="@color/muted"
-            android:textSize="15sp"
-            android:visibility="gone" />
+        <LinearLayout android:id="@+id/sosListPage" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone" android:paddingStart="18dp" android:paddingEnd="18dp" android:paddingTop="22dp" android:paddingBottom="24dp">
+            <TextView android:id="@+id/sosListBack" android:layout_width="wrap_content" android:layout_height="42dp" android:gravity="center" android:paddingHorizontal="14dp" android:background="@drawable/edusafe_sos_back_pill" android:text="‹  Back to Dashboard" android:textColor="#12356F" android:textSize="12sp" android:textStyle="bold" android:clickable="true" android:focusable="true"/>
+            <TextView android:id="@+id/sosListHeading" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="19dp" android:text="Active SOS Alerts" android:textSize="24sp" android:textStyle="bold" android:textColor="#0B1E49"/>
+            <TextView android:id="@+id/sosListSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Select an emergency to view details and respond." android:textColor="#657795" android:layout_marginTop="6dp" android:textSize="12sp"/>
+            <LinearLayout android:id="@+id/sosListContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="12dp"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/sosDetailPage" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone" android:paddingStart="18dp" android:paddingEnd="18dp" android:paddingTop="22dp" android:paddingBottom="24dp">
+            <TextView android:id="@+id/sosDetailBack" android:layout_width="wrap_content" android:layout_height="42dp" android:gravity="center" android:paddingHorizontal="14dp" android:background="@drawable/edusafe_sos_back_pill" android:text="‹  Back to Active Alerts" android:textColor="#12356F" android:textSize="12sp" android:textStyle="bold" android:clickable="true" android:focusable="true"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:orientation="vertical" android:padding="16dp" android:background="@drawable/edusafe_sos_white_card" android:elevation="5dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:id="@+id/sosDetailTitle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="SOS Emergency Details" android:textSize="19sp" android:textStyle="bold" android:textColor="#0B1E49"/>
+                    <TextView android:id="@+id/sosDetailStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/edusafe_sos_badge_active" android:paddingHorizontal="11dp" android:paddingVertical="7dp" android:text="● Active" android:textSize="11sp" android:textStyle="bold" android:textColor="#CC1850"/>
+                </LinearLayout>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="horizontal">
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:padding="11dp" android:background="@drawable/edusafe_sos_received_tile" android:orientation="vertical" android:layout_marginEnd="4dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="RECEIVED" android:letterSpacing="0.09" android:textSize="9sp" android:textStyle="bold" android:textColor="#496493"/>
+                        <TextView android:id="@+id/sosDetailTime" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="—" android:textSize="11sp" android:textStyle="bold" android:textColor="#0B1E49"/>
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:padding="11dp" android:background="@drawable/edusafe_sos_gps_tile" android:orientation="vertical" android:layout_marginStart="4dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="GPS" android:letterSpacing="0.09" android:textSize="9sp" android:textStyle="bold" android:textColor="#237C9E"/>
+                        <TextView android:id="@+id/sosDetailLocation" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="—" android:textSize="11sp" android:textStyle="bold" android:textColor="#0B1E49"/>
+                    </LinearLayout>
+                </LinearLayout>
+                <TextView android:id="@+id/sosDetailResponse" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:textSize="12sp" android:textColor="#657795" android:visibility="gone"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/sosDetailActions" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="15dp"/>
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>
+
+

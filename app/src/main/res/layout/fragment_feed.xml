@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:background="#EAF0FF"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -8,14 +9,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="18dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="NEWS SAFETY FEED"
+            android:text="News Safety Feed"
             android:textColor="@color/ink"
-            android:textSize="22sp"
+            android:textSize="24sp"
             android:textStyle="bold" />
 
         <TextView
@@ -30,18 +31,18 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:background="@drawable/bg_card"
+            android:background="@drawable/ui4_white_card"
             android:orientation="vertical"
-            android:padding="14dp">
+            android:padding="16dp">
 
             <EditText
                 android:id="@+id/etPost"
                 android:layout_width="match_parent"
-                android:layout_height="100dp"
+                android:layout_height="92dp"
                 android:background="@null"
                 android:contentDescription="Write a post"
                 android:gravity="top"
-                android:hint="Seen something suspicious or unsafe? Share it with campus…"
+                android:hint="Seen something suspicious or unsafe? Share it with campus..."
                 android:importantForAutofill="no"
                 android:inputType="textMultiLine|textCapSentences"
                 android:maxLength="500"
@@ -87,7 +88,7 @@
                     android:id="@+id/tvPost"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/bg_chip_selected"
+                    android:background="@drawable/ui4_blue_button"
                     android:clickable="true"
                     android:contentDescription="Post"
                     android:focusable="true"

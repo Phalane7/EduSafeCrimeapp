@@ -1,8 +1,6 @@
 package com.example.edusafe;
 
-import android.annotation.SuppressLint;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -11,8 +9,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.google.firebase.auth.FirebaseAuth;
 
 public class CreateNewPasswordActivity extends AppCompatActivity {
 
@@ -24,62 +20,51 @@ public class CreateNewPasswordActivity extends AppCompatActivity {
 
     private Button btnUpdatePassword;
 
-    private String oobCode;
+    private AuthRepository authRepository;
 
-    private final FirebaseAuth auth =
-            FirebaseAuth.getInstance();
-
-    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
 
-        setContentView(
-                R.layout.activity_create_new_password
-        );
+        // Initialize Supabase authentication
+        authRepository = new AuthRepository(this);
 
-        // -------------------------------------------------
-        // Find views
-        // -------------------------------------------------
+        // Keep your existing XML design
+        setContentView(R.layout.activity_create_new_password);
 
-        etNewPassword =
-                findViewById(R.id.etNewPassword);
+        // -----------------------------------------
+        // CONNECT XML VIEWS
+        // -----------------------------------------
 
-        etConfirmPassword =
-                findViewById(R.id.etConfirmPassword);
+        etNewPassword = findViewById(R.id.etNewPassword);
 
-        tvSubtitle =
-                findViewById(R.id.tvSubtitle);
+        etConfirmPassword = findViewById(R.id.etConfirmPassword);
 
-        tvPasswordError =
-                findViewById(R.id.tvPasswordError);
+        tvSubtitle = findViewById(R.id.tvSubtitle);
 
-        TextView tvBackToLogin = findViewById(R.id.tvBackToLogin);
+        tvPasswordError = findViewById(R.id.tvPasswordError);
 
-        btnUpdatePassword =
-                findViewById(R.id.btnUpdatePassword);
+        btnUpdatePassword = findViewById(R.id.btnUpdatePassword);
 
-        // -------------------------------------------------
-        // Back to login
-        // -------------------------------------------------
+        TextView tvBackToLogin =
+                findViewById(R.id.tvBackToLogin);
+
+        // -----------------------------------------
+        // BACK TO LOGIN
+        // -----------------------------------------
 
         tvBackToLogin.setOnClickListener(
                 v -> goToLogin()
         );
 
-        // -------------------------------------------------
-        // Get Firebase reset code from link
-        // -------------------------------------------------
+        // -----------------------------------------
+        // CHECK RECOVERY SESSION
+        // -----------------------------------------
 
-        oobCode =
-                extractOobCode(getIntent());
-
-        if (oobCode == null
-                || oobCode.isEmpty()) {
+        if (!authRepository.hasRecoverySession()) {
 
             tvSubtitle.setText(
-                    "This reset link is invalid or has expired. Please request a new one."
+                    "Your password recovery session is missing or has expired. Please request a new code."
             );
 
             btnUpdatePassword.setEnabled(false);
@@ -87,183 +72,117 @@ public class CreateNewPasswordActivity extends AppCompatActivity {
             return;
         }
 
-        // -------------------------------------------------
-        // Check whether reset link is valid
-        // -------------------------------------------------
+        tvSubtitle.setText(
+                "Enter your new password below."
+        );
 
-        verifyCodeIsStillValid();
+        // -----------------------------------------
+        // UPDATE PASSWORD BUTTON
+        // -----------------------------------------
 
         btnUpdatePassword.setOnClickListener(
                 v -> attemptUpdatePassword()
         );
     }
 
-    // ---------------------------------------------------------
-    // GET OOB CODE
-    // ---------------------------------------------------------
-
-    private String extractOobCode(Intent intent) {
-
-        if (intent == null) {
-            return null;
-        }
-
-        Uri data =
-                intent.getData();
-
-        if (data == null) {
-            return null;
-        }
-
-        return data.getQueryParameter(
-                "oobCode"
-        );
-    }
-
-    // ---------------------------------------------------------
-    // CHECK RESET LINK
-    // ---------------------------------------------------------
-
-    private void verifyCodeIsStillValid() {
-
-        btnUpdatePassword.setEnabled(false);
-
-        auth.verifyPasswordResetCode(
-                        oobCode
-                )
-                .addOnSuccessListener(email -> {
-
-                    tvSubtitle.setText(
-                            "Enter a new password for " + email + "."
-                    );
-
-                    btnUpdatePassword.setEnabled(
-                            true
-                    );
-                })
-                .addOnFailureListener(e -> {
-
-                    tvSubtitle.setText(
-                            "This reset link is invalid or has expired. Please request a new one."
-                    );
-
-                    btnUpdatePassword.setEnabled(
-                            false
-                    );
-                });
-    }
-
-    // ---------------------------------------------------------
-    // UPDATE PASSWORD
-    // ---------------------------------------------------------
+    // -----------------------------------------
+    // VALIDATE AND UPDATE PASSWORD
+    // -----------------------------------------
 
     private void attemptUpdatePassword() {
 
         String newPassword =
-                etNewPassword.getText()
-                        .toString()
-                        .trim();
+                etNewPassword.getText().toString();
 
         String confirmPassword =
-                etConfirmPassword.getText()
-                        .toString()
-                        .trim();
+                etConfirmPassword.getText().toString();
 
-        // -------------------------------------------------
-        // Password length
-        // -------------------------------------------------
-
+        // Password must contain at least 8 characters
         if (newPassword.length() < 8) {
 
             Toast.makeText(
                     this,
-                    "Password must be at least 8 characters",
+                    "Password must be at least 8 characters.",
                     Toast.LENGTH_SHORT
             ).show();
 
             return;
         }
 
-        // -------------------------------------------------
-        // Password confirmation
-        // -------------------------------------------------
+        // Check passwords match
+        if (!newPassword.equals(confirmPassword)) {
 
-        if (!newPassword.equals(
-                confirmPassword
-        )) {
+            tvPasswordError.setVisibility(View.VISIBLE);
 
-            tvPasswordError.setVisibility(
-                    View.VISIBLE
-            );
+            Toast.makeText(
+                    this,
+                    "Passwords do not match.",
+                    Toast.LENGTH_SHORT
+            ).show();
 
             return;
         }
 
-        tvPasswordError.setVisibility(
-                View.GONE
+        tvPasswordError.setVisibility(View.GONE);
+
+        btnUpdatePassword.setEnabled(false);
+
+        // -----------------------------------------
+        // UPDATE PASSWORD USING SUPABASE
+        // -----------------------------------------
+
+        authRepository.updateRecoveredPassword(
+                newPassword,
+                new AuthCallback<Void>() {
+
+                    @Override
+                    public void onSuccess(Void result) {
+
+                        Toast.makeText(
+                                CreateNewPasswordActivity.this,
+                                "Password updated successfully! Please log in.",
+                                Toast.LENGTH_LONG
+                        ).show();
+
+                        // Return to Login
+                        goToLogin();
+                    }
+
+                    @Override
+                    public void onError(String message) {
+
+                        btnUpdatePassword.setEnabled(true);
+
+                        Toast.makeText(
+                                CreateNewPasswordActivity.this,
+                                message,
+                                Toast.LENGTH_LONG
+                        ).show();
+                    }
+                }
         );
-
-        btnUpdatePassword.setEnabled(
-                false
-        );
-
-        // -------------------------------------------------
-        // Firebase changes password
-        // -------------------------------------------------
-
-        auth.confirmPasswordReset(
-                        oobCode,
-                        newPassword
-                )
-                .addOnSuccessListener(
-                        unused -> {
-
-                            Toast.makeText(
-                                    this,
-                                    "Password updated. Please log in.",
-                                    Toast.LENGTH_LONG
-                            ).show();
-
-                            goToLogin();
-                        }
-                )
-                .addOnFailureListener(
-                        e -> {
-
-                            btnUpdatePassword.setEnabled(
-                                    true
-                            );
-
-                            Toast.makeText(
-                                    this,
-                                    e.getMessage() != null
-                                            ? e.getMessage()
-                                            : "Could not update your password.",
-                                    Toast.LENGTH_LONG
-                            ).show();
-                        }
-                );
     }
 
-    // ---------------------------------------------------------
-    // GO TO LOGIN
-    // ---------------------------------------------------------
+    // -----------------------------------------
+    // RETURN TO LOGIN SCREEN
+    // -----------------------------------------
 
     private void goToLogin() {
 
-        Intent intent =
-                new Intent(
-                        CreateNewPasswordActivity.this,
-                        LoginActivity.class
-                );
+        authRepository.clearRecoverySession();
 
-        intent.setFlags(
-                Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        | Intent.FLAG_ACTIVITY_NEW_TASK
+        Intent intent = new Intent(
+                CreateNewPasswordActivity.this,
+                LoginActivity.class
+        );
+
+        intent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_ACTIVITY_CLEAR_TASK
         );
 
         startActivity(intent);
-
         finish();
     }
 }
+

@@ -1,118 +1,29 @@
-<?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/light_blue"
-    android:fillViewport="true">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:paddingBottom="24dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="ADMIN"
-            android:textColor="@color/ink"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_banner"
-            android:orientation="vertical"
-            android:padding="18dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="STAFF WORKSPACE"
-                android:textColor="@color/light_blue"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Review incident reports and update their status."
-                android:textColor="@color/white"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Local workspace · data is stored on this device"
-                android:textColor="@color/light_blue"
-                android:textSize="13sp" />
+<?xml version='1.0' encoding='utf-8'?>
+<ScrollView xmlns:ns0="http://schemas.android.com/apk/res/android" ns0:layout_width="match_parent" ns0:layout_height="match_parent" ns0:background="#EAF0FF" ns0:fillViewport="true">
+    <LinearLayout ns0:layout_width="match_parent" ns0:layout_height="wrap_content" ns0:orientation="vertical" ns0:padding="20dp" ns0:paddingBottom="36dp">
+        <TextView ns0:layout_width="wrap_content" ns0:layout_height="wrap_content" ns0:text="Admin" ns0:textSize="25sp" ns0:textStyle="bold" ns0:textColor="#0C2458" ns0:layout_marginBottom="18dp" />
+        <LinearLayout ns0:layout_width="match_parent" ns0:layout_height="wrap_content" ns0:orientation="vertical" ns0:padding="20dp" ns0:background="@drawable/edusafe_admin_banner" ns0:elevation="5dp">
+            <TextView ns0:layout_width="wrap_content" ns0:layout_height="wrap_content" ns0:text="STAFF WORKSPACE" ns0:letterSpacing="0.13" ns0:textColor="#B9D3FF" ns0:textStyle="bold" ns0:textSize="11sp" />
+            <TextView ns0:layout_width="match_parent" ns0:layout_height="wrap_content" ns0:layout_marginTop="10dp" ns0:text="Review News Feed posts and manage student accounts." ns0:textColor="#FFFFFF" ns0:textSize="19sp" ns0:textStyle="bold" />
+            <TextView ns0:layout_width="match_parent" ns0:layout_height="wrap_content" ns0:layout_marginTop="14dp" ns0:text="●  Connected to EduSafe administration" ns0:textColor="#C6DBFF" ns0:textSize="12sp" />
         </LinearLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="REPORT OVERVIEW"
-            android:textColor="@color/ink"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:orientation="horizontal">
-
-            <LinearLayout style="@style/StatCard" android:layout_marginEnd="8dp">
-                <TextView android:id="@+id/tvReports" style="@style/StatValue" android:text="0" />
-                <TextView style="@style/StatLabel" android:text="Reports" />
+        <TextView ns0:layout_width="wrap_content" ns0:layout_height="wrap_content" ns0:layout_marginTop="26dp" ns0:layout_marginBottom="12dp" ns0:text="ADMIN TOOLS" ns0:letterSpacing="0.12" ns0:textColor="#546B96" ns0:textSize="12sp" ns0:textStyle="bold" />
+        <LinearLayout ns0:id="@+id/btnFeedModeration" ns0:layout_width="match_parent" ns0:layout_height="wrap_content" ns0:minHeight="74dp" ns0:orientation="horizontal" ns0:gravity="center_vertical" ns0:padding="14dp" ns0:clickable="true" ns0:focusable="true" ns0:contentDescription="Review News Feed posts and comments" ns0:background="@drawable/edusafe_admin_tool" ns0:elevation="3dp">
+            <TextView ns0:layout_width="38dp" ns0:layout_height="38dp" ns0:gravity="center" ns0:text="▤" ns0:textSize="22sp" ns0:textColor="#FFFFFF" ns0:background="@drawable/edusafe_admin_icon" />
+            <LinearLayout ns0:layout_width="0dp" ns0:layout_height="wrap_content" ns0:layout_weight="1" ns0:orientation="vertical" ns0:layout_marginStart="12dp">
+                <TextView ns0:layout_width="match_parent" ns0:layout_height="wrap_content" ns0:text="News Feed Moderation" ns0:textColor="#FFFFFF" ns0:textStyle="bold" ns0:textSize="15sp" />
+                <TextView ns0:layout_width="match_parent" ns0:layout_height="wrap_content" ns0:text="Review posts and comments" ns0:textColor="#C7D7FA" ns0:textSize="12sp" />
             </LinearLayout>
-            <LinearLayout style="@style/StatCard" android:layout_marginHorizontal="4dp">
-                <TextView android:id="@+id/tvReview" style="@style/StatValue" android:text="0" />
-                <TextView style="@style/StatLabel" android:text="Under review" />
-            </LinearLayout>
-            <LinearLayout style="@style/StatCard" android:layout_marginStart="8dp">
-                <TextView android:id="@+id/tvResolved" style="@style/StatValue" android:text="0" />
-                <TextView style="@style/StatLabel" android:text="Resolved" />
-            </LinearLayout>
+            <TextView ns0:layout_width="wrap_content" ns0:layout_height="wrap_content" ns0:text="›" ns0:textSize="26sp" ns0:textColor="#FFFFFF" />
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/btnDashboard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:background="@drawable/bg_chip_selected"
-            android:clickable="true"
-            android:contentDescription="Open the Security Dashboard and review reports"
-            android:focusable="true"
-            android:gravity="center"
-            android:minHeight="56dp"
-            android:text="Open Security Dashboard   ›"
-            android:textColor="@color/white"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/btnSettings"
-            style="@style/MapAction"
-            android:contentDescription="Open app settings"
-            android:text="⚙️   App settings   ›" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_card"
-            android:padding="16dp"
-            android:text="This demo workspace has no staff sign-in or live campus connection. Report updates are saved locally on this device."
-            android:textColor="@color/muted"
-            android:textSize="13sp" />
+        <LinearLayout ns0:id="@+id/btnRegisteredUsers" ns0:layout_width="match_parent" ns0:layout_height="wrap_content" ns0:layout_marginTop="12dp" ns0:minHeight="74dp" ns0:orientation="horizontal" ns0:gravity="center_vertical" ns0:padding="14dp" ns0:clickable="true" ns0:focusable="true" ns0:contentDescription="Registered users" ns0:background="@drawable/edusafe_admin_tool" ns0:elevation="3dp">
+            <TextView ns0:layout_width="38dp" ns0:layout_height="38dp" ns0:gravity="center" ns0:text="♙" ns0:textSize="22sp" ns0:textColor="#FFFFFF" ns0:background="@drawable/edusafe_admin_icon" />
+            <LinearLayout ns0:layout_width="0dp" ns0:layout_height="wrap_content" ns0:layout_weight="1" ns0:orientation="vertical" ns0:layout_marginStart="12dp">
+                <TextView ns0:layout_width="match_parent" ns0:layout_height="wrap_content" ns0:text="Registered Users" ns0:textColor="#FFFFFF" ns0:textStyle="bold" ns0:textSize="15sp" />
+                <TextView ns0:layout_width="match_parent" ns0:layout_height="wrap_content" ns0:text="Manage student accounts" ns0:textColor="#C7D7FA" ns0:textSize="12sp" />
+            </LinearLayout>
+            <TextView ns0:layout_width="wrap_content" ns0:layout_height="wrap_content" ns0:text="›" ns0:textSize="26sp" ns0:textColor="#FFFFFF" />
+        </LinearLayout>
+        <TextView ns0:layout_width="match_parent" ns0:layout_height="wrap_content" ns0:layout_marginTop="20dp" ns0:padding="15dp" ns0:background="@drawable/edusafe_admin_soft" ns0:text="ⓘ  Manage registered student accounts and review News Feed posts." ns0:textColor="#385781" ns0:textSize="12sp" />
     </LinearLayout>
 </ScrollView>

@@ -1,397 +1,171 @@
 package com.example.edusafe.ui.sos;
 
 import android.content.Context;
+import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.LinearGradient;
-import android.graphics.Path;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.AttributeSet;
-import android.util.TypedValue;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 
-import androidx.core.content.ContextCompat;
-
-import com.example.edusafe.R;
-
-/**
- * HoldProgressButton
- * ----------------------------------------------------------------------
- * The whole "HOLD FOR HELP" control as ONE self-contained view. It draws,
- * from the outside in:
- *
- *   1. a faint frosted disc
- *   2. a ring of small dots
- *   3. a glass bezel ring (this is also where the hold progress fills in)
- *   4. a thin dark gap
- *   5. the glossy red sphere, with its shine
- *   6. the "HOLD / FOR HELP" text
- *   7. the "Hold for 4 seconds..." caption underneath
- *
- * Everything is sized from the view's own width/height, so it looks the
- * same on small and large phones. The button + caption are centred as one
- * block inside whatever space the layout gives this view.
- *
- * Only a touch that lands INSIDE the round button starts a hold. Letting
- * go early resets everything, so a stray tap never sends an alert.
- *
- * Usage (unchanged from before):
- *   HoldProgressButton hold = findViewById(R.id.holdProgressRing);
- *   hold.setHoldDurationMs(4000);
- *   hold.setOnHoldCompleteListener(() -> { ...send the alert... });
- * ----------------------------------------------------------------------
- */
+/** Glowing wave SOS control. Only a completed hold invokes the listener. */
 public class HoldProgressButton extends View {
-
-    public interface OnHoldCompleteListener {
-        void onHoldComplete();
-    }
-
-    private static final long TICK_MS = 16L; // ~60 frames a second
-    private static final int DOT_COUNT = 60;
-
-    // Proportions, as fractions of the outer disc radius (R0)
-    private static final float DOT_RING_R = 0.89f;
-    private static final float BEZEL_OUTER_R = 0.83f;
-    private static final float BEZEL_INNER_R = 0.76f;
-    private static final float SPHERE_R = 0.735f;
-
-    // Sizing rules
-    private static final float MAX_DIAMETER_DP = 290f;
-    private static final float WIDTH_FRACTION = 0.84f;
-    private static final float CAPTION_GAP_DP = 14f;
-    private static final float BLOCK_VERTICAL_BIAS = 0.4f;
-    private static final float PRESSED_SCALE = 0.97f;
-
+    public interface OnHoldCompleteListener { void onHoldComplete(); }
+    private static final long FRAME_MS = 16L;
     private long holdDurationMs = 4000L;
-    private float progress = 0f;
-    private boolean isHolding = false;
-    private int secondsLeft = 0;
-    private long holdStartTime = 0L;
+    private long startMs;
+    private boolean holding;
+    private float progress;
     private OnHoldCompleteListener listener;
-
     private final Handler handler = new Handler(Looper.getMainLooper());
-
-    // Paints
-    private final Paint discFill = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint discEdge = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint bezelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint gapPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint spherePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint sphereShade = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint shinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint holdText = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint forHelpText = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint captionText = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint progressPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint countText = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint keepHoldingText = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint rimInner = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint rimOuter = new Paint(Paint.ANTI_ALIAS_FLAG);
-
-    // Geometry, recalculated in onSizeChanged
-    private float cx, cy, outerR, sphereR, captionBaseline;
-    private final RectF progressOval = new RectF();
-    private final Path spherePath = new Path();
-    private float shineCx, shineCy, shineR;
-
-    private final Runnable tickRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (!isHolding) return;
-            long elapsed = System.currentTimeMillis() - holdStartTime;
-            progress = Math.min(1f, elapsed / (float) holdDurationMs);
-            int left = Math.max(1, (int) Math.ceil((holdDurationMs - elapsed) / 1000.0));
-            if (left != secondsLeft) {
-                secondsLeft = left;
-                performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
-            }
+    private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Path wave = new Path();
+    private final RectF arc = new RectF();
+    private float cx, cy, radius, innerRadius;
+    private final Runnable ticker = new Runnable() {
+        @Override public void run() {
+            if (!holding) return;
+            progress = Math.min(1f, (SystemClock.uptimeMillis() - startMs) / (float) holdDurationMs);
             invalidate();
-            if (elapsed >= holdDurationMs) {
-                isHolding = false;
+            if (progress >= 1f) {
+                holding = false;
                 progress = 0f;
                 performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                 if (listener != null) listener.onHoldComplete();
                 invalidate();
-            } else {
-                handler.postDelayed(this, TICK_MS);
-            }
+            } else handler.postDelayed(this, FRAME_MS);
         }
     };
-
-    public HoldProgressButton(Context context) {
-        super(context);
-        init(context);
-    }
-
-    public HoldProgressButton(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        init(context);
-    }
-
-    private void init(Context context) {
+    public HoldProgressButton(Context context) { super(context); init(); }
+    public HoldProgressButton(Context context, AttributeSet attrs) { super(context, attrs); init(); }
+    public HoldProgressButton(Context context, AttributeSet attrs, int style) { super(context, attrs, style); init(); }
+    private void init() {
+        setLayerType(View.LAYER_TYPE_SOFTWARE, null); // needed for the soft ring glows
         setClickable(true);
         setFocusable(true);
-        setContentDescription("Hold for 4 seconds to send an emergency alert");
-
-        Typeface bold = Typeface.create(Typeface.DEFAULT, Typeface.BOLD);
-        Typeface regular = Typeface.DEFAULT;
-
-        discEdge.setStyle(Paint.Style.STROKE);
-        discEdge.setColor(Color.argb(70, 255, 255, 255));
-        discEdge.setStrokeWidth(dp(1f));
-
-        dotPaint.setColor(Color.argb(200, 255, 255, 255));
-
-        bezelPaint.setStyle(Paint.Style.STROKE);
-
-        gapPaint.setColor(Color.parseColor("#760113"));
-
-        rimInner.setStyle(Paint.Style.STROKE);
-        rimInner.setStrokeWidth(dp(1.2f));
-        rimOuter.setStyle(Paint.Style.STROKE);
-        rimOuter.setStrokeWidth(dp(1f));
-        rimOuter.setColor(Color.argb(60, 255, 255, 255));
-
-        shinePaint.setStyle(Paint.Style.FILL);
-
-        holdText.setColor(Color.WHITE);
-        holdText.setTypeface(bold);
-        holdText.setTextAlign(Paint.Align.CENTER);
-
-        forHelpText.setColor(Color.WHITE);
-        forHelpText.setTypeface(bold);
-        forHelpText.setTextAlign(Paint.Align.CENTER);
-
-        captionText.setColor(ContextCompat.getColor(context, R.color.muted_pink_text));
-        captionText.setTypeface(regular);
-        captionText.setTextAlign(Paint.Align.CENTER);
-        captionText.setTextSize(TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_SP, 12f, getResources().getDisplayMetrics()));
-
-        countText.setColor(Color.WHITE);
-        countText.setTypeface(bold);
-        countText.setTextAlign(Paint.Align.CENTER);
-
-        keepHoldingText.setColor(Color.WHITE);
-        keepHoldingText.setTypeface(bold);
-        keepHoldingText.setTextAlign(Paint.Align.CENTER);
-
-        progressPaint.setStyle(Paint.Style.STROKE);
-        progressPaint.setColor(Color.WHITE);
-        progressPaint.setStrokeCap(Paint.Cap.ROUND);
+        setContentDescription("Hold for help for four seconds to activate emergency SOS");
     }
-
-    public void setHoldDurationMs(long ms) {
-        this.holdDurationMs = ms;
-    }
-
-    public void setOnHoldCompleteListener(OnHoldCompleteListener listener) {
-        this.listener = listener;
-    }
-
-    // ------------------------------------------------------------------
-    // Sizing
-    // ------------------------------------------------------------------
-
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        int desiredW = (int) dp(MAX_DIAMETER_DP);
-        int desiredH = (int) (dp(MAX_DIAMETER_DP) + dp(CAPTION_GAP_DP) + dp(24f));
-        setMeasuredDimension(resolveSize(desiredW, widthMeasureSpec),
-                resolveSize(desiredH, heightMeasureSpec));
-    }
-
-    @Override
-    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+    public void setHoldDurationMs(long ms) { holdDurationMs = Math.max(1000L, ms); }
+    public void setOnHoldCompleteListener(OnHoldCompleteListener l) { listener = l; }
+    private float dp(float n) { return n * getResources().getDisplayMetrics().density; }
+    @Override protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-
-        float captionHeight = captionText.getFontSpacing();
-        float gap = dp(CAPTION_GAP_DP);
-
-        // The button is as big as the space allows, but never bigger than the design maximum.
-        float diameter = Math.min(w * WIDTH_FRACTION, h - gap - captionHeight);
-        diameter = Math.min(diameter, dp(MAX_DIAMETER_DP));
-        diameter = Math.max(diameter, dp(120f));
-
-        float blockHeight = diameter + gap + captionHeight;
-        float top = Math.max(0f, (h - blockHeight) * BLOCK_VERTICAL_BIAS);
-
-        outerR = diameter / 2f;
         cx = w / 2f;
-        cy = top + outerR;
-        sphereR = outerR * SPHERE_R;
-        captionBaseline = top + diameter + gap + captionHeight - captionText.descent();
-
-        // Frosted disc: slightly brighter toward the upper-left
-        discFill.setShader(new LinearGradient(cx - outerR, cy - outerR, cx + outerR, cy + outerR,
-                Color.argb(46, 255, 255, 255), Color.argb(14, 255, 255, 255), Shader.TileMode.CLAMP));
-
-        // Dots
-        dotPaint.setStyle(Paint.Style.FILL);
-
-        // Glass bezel: bright at both ends of the diagonal, clearer in the middle
-        float bezelWidth = (BEZEL_OUTER_R - BEZEL_INNER_R) * outerR;
-        bezelPaint.setStrokeWidth(bezelWidth);
-        bezelPaint.setShader(new LinearGradient(cx - outerR * 0.8f, cy - outerR * 0.8f,
-                cx + outerR * 0.8f, cy + outerR * 0.8f,
-                new int[]{Color.argb(72, 255, 255, 255), Color.argb(26, 255, 255, 255), Color.argb(100, 255, 255, 255)},
-                new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP));
-
-        // Thin bright rim on the bezel's inner edge: strong upper-left, softer lower-right
-        rimInner.setShader(new LinearGradient(cx - outerR * 0.8f, cy - outerR * 0.8f,
-                cx + outerR * 0.8f, cy + outerR * 0.8f,
-                Color.argb(200, 255, 255, 255), Color.argb(70, 255, 255, 255), Shader.TileMode.CLAMP));
-
-        // Red sphere: lit from the upper-left
-        spherePaint.setShader(new RadialGradient(cx - sphereR * 0.2f, cy - sphereR * 0.15f, sphereR * 1.3f,
-                new int[]{Color.parseColor("#C4192B"), Color.parseColor("#B50218"),
-                        Color.parseColor("#8D0314"), Color.parseColor("#7A0113")},
-                new float[]{0f, 0.45f, 0.85f, 1f}, Shader.TileMode.CLAMP));
-
-        // Edge shading, so it reads as a sphere and not a flat disc
-        sphereShade.setShader(new RadialGradient(cx, cy, sphereR,
-                new int[]{Color.TRANSPARENT, Color.TRANSPARENT, Color.argb(95, 40, 0, 6)},
-                new float[]{0f, 0.78f, 1f}, Shader.TileMode.CLAMP));
-
-        // Glossy highlight: a soft glow in the upper part of the sphere (clipped to the sphere when drawn)
-        spherePath.reset();
-        spherePath.addCircle(cx, cy, sphereR, Path.Direction.CW);
-        shineCx = cx;
-        shineCy = cy - sphereR * 0.62f;
-        shineR = sphereR * 0.95f;
-        shinePaint.setShader(new RadialGradient(shineCx, shineCy, shineR,
-                new int[]{Color.argb(158, 255, 255, 255), Color.argb(87, 255, 255, 255), Color.argb(0, 255, 255, 255)},
-                new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP));
-
-        // Text sizes come from the sphere size
-        holdText.setTextSize(sphereR * 0.385f);
-        forHelpText.setTextSize(sphereR * 0.1815f);
-        countText.setTextSize(sphereR * 0.72f);
-        keepHoldingText.setTextSize(sphereR * 0.14f);
-
-        // Progress arc rides on the bezel ring
-        float ringRadius = (BEZEL_OUTER_R + BEZEL_INNER_R) / 2f * outerR;
-        progressOval.set(cx - ringRadius, cy - ringRadius, cx + ringRadius, cy + ringRadius);
-        progressPaint.setStrokeWidth(bezelWidth * 0.9f);
+        cy = h / 2f;
+        radius = Math.min(Math.min(w, h) * 0.475f, dp(183));
+        innerRadius = radius * 0.48f;
     }
-
-    // ------------------------------------------------------------------
-    // Drawing
-    // ------------------------------------------------------------------
-
-    @Override
-    protected void onDraw(Canvas canvas) {
+    private void ring(Canvas c, float r, int color, float width, float glow) {
+        p.reset(); p.setAntiAlias(true); p.setStyle(Paint.Style.STROKE);
+        p.setColor(color); p.setStrokeWidth(width); p.setStrokeCap(Paint.Cap.ROUND);
+        if (glow > 0) p.setShadowLayer(glow, 0, 0, color);
+        c.drawCircle(cx, cy, r, p);
+        p.clearShadowLayer();
+    }
+    private void waveRing(Canvas c, float r, float amplitude, int color, float width, float glow, float phase) {
+        wave.reset();
+        for (int i = 0; i <= 360; i += 2) {
+            double a = Math.toRadians(i);
+            float rr = r + (float)Math.sin(a * 9 + phase) * amplitude
+                    + (float)Math.sin(a * 5 - phase * 0.6) * amplitude * 0.3f;
+            float x = cx + (float)Math.cos(a) * rr;
+            float y = cy + (float)Math.sin(a) * rr;
+            if (i == 0) wave.moveTo(x, y); else wave.lineTo(x, y);
+        }
+        wave.close();
+        p.reset(); p.setAntiAlias(true); p.setStyle(Paint.Style.STROKE);
+        p.setStrokeWidth(width); p.setColor(color);
+        if (glow > 0) p.setShadowLayer(glow, 0, 0, color);
+        c.drawPath(wave, p);
+        p.clearShadowLayer();
+    }
+    @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-
-        // 1. frosted disc
-        canvas.drawCircle(cx, cy, outerR - 0.5f, discFill);
-        canvas.drawCircle(cx, cy, outerR - 0.5f, discEdge);
-
-        // 2. dotted ring
-        float dotRadius = Math.max(dp(0.8f), outerR * 0.0072f);
-        float dotRing = DOT_RING_R * outerR;
-        for (int i = 0; i < DOT_COUNT; i++) {
-            double angle = 2.0 * Math.PI * i / DOT_COUNT;
-            canvas.drawCircle(cx + (float) Math.cos(angle) * dotRing,
-                    cy + (float) Math.sin(angle) * dotRing, dotRadius, dotPaint);
-        }
-
-        // 3. glass bezel, with the hold progress filling it clockwise from the top
-        float bezelCenterR = (BEZEL_OUTER_R + BEZEL_INNER_R) / 2f * outerR;
-        canvas.drawCircle(cx, cy, bezelCenterR, bezelPaint);
-        canvas.drawCircle(cx, cy, BEZEL_OUTER_R * outerR, rimOuter);
-        canvas.drawCircle(cx, cy, BEZEL_INNER_R * outerR, rimInner);
-        if (progress > 0f) {
-            canvas.drawArc(progressOval, -90f, 360f * progress, false, progressPaint);
-        }
-
-        // 4. dark gap + 5. sphere (+ press-in effect) + 6. text
-        canvas.save();
-        if (isHolding) canvas.scale(PRESSED_SCALE, PRESSED_SCALE, cx, cy);
-
-        canvas.drawCircle(cx, cy, BEZEL_INNER_R * outerR, gapPaint);
-        canvas.drawCircle(cx, cy, sphereR, spherePaint);
-        canvas.drawCircle(cx, cy, sphereR, sphereShade);
-        canvas.save();
-        canvas.clipPath(spherePath);
-        canvas.drawCircle(shineCx, shineCy, shineR, shinePaint);
-        canvas.restore();
-
-        if (isHolding) {
-            canvas.drawText(String.valueOf(secondsLeft), cx, cy + sphereR * 0.24f, countText);
-            canvas.drawText("KEEP HOLDING", cx, cy + sphereR * 0.55f, keepHoldingText);
+        if (radius <= 0) return;
+        // Broad red illumination behind the wavy outer rings.
+        p.reset(); p.setAntiAlias(true); p.setStyle(Paint.Style.FILL);
+        p.setShader(new RadialGradient(cx, cy, radius * 1.08f,
+                new int[]{0x66FF151B, 0x55EF0013, 0x227E0009, 0x007E0009},
+                new float[]{0f, 0.48f, 0.79f, 1f}, Shader.TileMode.CLAMP));
+        canvas.drawCircle(cx, cy, radius * 1.08f, p); p.setShader(null);
+        waveRing(canvas, radius * .95f, dp(7.0f), 0x66FF3840, dp(1.2f), dp(8), 0.4f);
+        waveRing(canvas, radius * .87f, dp(5.3f), 0x88FF2B35, dp(1.5f), dp(9), 1.1f);
+        waveRing(canvas, radius * .79f, dp(4.1f), 0xBBFF3C43, dp(1.7f), dp(10), 2.1f);
+        waveRing(canvas, radius * .71f, dp(2.7f), 0xFFFF5559, dp(2.1f), dp(10), 2.9f);
+        ring(canvas, radius * .65f, 0xFFFF2A32, dp(9), dp(16));
+        ring(canvas, radius * .62f, 0xFFFF6D71, dp(1.8f), dp(8));
+        ring(canvas, radius * .57f, 0xFFDC0C20, dp(8), dp(11));
+        ring(canvas, radius * .54f, 0xFFFF4C56, dp(1.7f), dp(6));
+        // White centre, soft edge shadow and subtle shading.
+        p.reset(); p.setAntiAlias(true); p.setStyle(Paint.Style.FILL);
+        p.setColor(0xFFFFF7F7); p.setShadowLayer(dp(12), 0, dp(2), 0xFFFF3342);
+        canvas.drawCircle(cx, cy, innerRadius, p); p.clearShadowLayer();
+        p.setShader(new RadialGradient(cx - innerRadius * .23f, cy - innerRadius * .3f,
+                innerRadius * 1.55f, 0xFFFFFFFF, 0xFFECE6E7, Shader.TileMode.CLAMP));
+        canvas.drawCircle(cx, cy, innerRadius * .97f, p); p.setShader(null);
+        p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(dp(1.2f)); p.setColor(0xFFFFCED0);
+        canvas.drawCircle(cx, cy, innerRadius, p);
+        // Text remains legible on the small SOS centre.
+        p.reset(); p.setAntiAlias(true); p.setColor(0xFFD41122);
+        p.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        p.setTextAlign(Paint.Align.CENTER);
+        if (holding) {
+            int seconds = Math.max(1, (int)Math.ceil((holdDurationMs * (1f - progress)) / 1000f));
+            p.setTextSize(innerRadius * .73f);
+            canvas.drawText(String.valueOf(seconds), cx, cy + innerRadius * .13f, p);
+            p.setTextSize(innerRadius * .20f);
+            canvas.drawText("KEEP HOLDING", cx, cy + innerRadius * .49f, p);
         } else {
-            canvas.drawText("HOLD", cx, cy + sphereR * 0.014f, holdText);
-            canvas.drawText("FOR HELP", cx, cy + sphereR * 0.31f, forHelpText);
+            p.setTextSize(innerRadius * .35f);
+            canvas.drawText("HOLD", cx, cy - innerRadius * .02f, p);
+            p.setTextSize(innerRadius * .26f);
+            canvas.drawText("FOR HELP", cx, cy + innerRadius * .34f, p);
         }
-        canvas.restore();
-
-        // 7. caption
-        canvas.drawText("Hold for 4 seconds to send alert", cx, captionBaseline, captionText);
+        if (progress > 0f) {
+            p.reset(); p.setAntiAlias(true); p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(dp(5)); p.setStrokeCap(Paint.Cap.ROUND); p.setColor(Color.WHITE);
+            float rr = radius * .61f;
+            arc.set(cx - rr, cy - rr, cx + rr, cy + rr);
+            canvas.drawArc(arc, -90, 360 * progress, false, p);
+        }
     }
-
-    // ------------------------------------------------------------------
-    // Touch: only the round button itself reacts
-    // ------------------------------------------------------------------
-
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
+    private boolean inside(float x, float y) {
+        float dx = x - cx, dy = y - cy;
+        return dx * dx + dy * dy <= innerRadius * innerRadius;
+    }
+    @Override public boolean onTouchEvent(MotionEvent event) {
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                if (!isInsideButton(event.getX(), event.getY())) return false;
-                startHolding();
+                if (!inside(event.getX(), event.getY())) return false;
+                holding = true; progress = 0f; startMs = SystemClock.uptimeMillis();
+                performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+                handler.removeCallbacks(ticker); handler.post(ticker); invalidate();
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                if (holding && !inside(event.getX(), event.getY())) cancelHold();
                 return true;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                stopHolding();
-                return true;
-            default:
-                return super.onTouchEvent(event);
+                cancelHold(); return true;
+            default: return super.onTouchEvent(event);
         }
     }
-
-    private boolean isInsideButton(float x, float y) {
-        float dx = x - cx;
-        float dy = y - cy;
-        return dx * dx + dy * dy <= outerR * outerR;
+    private void cancelHold() {
+        holding = false; progress = 0f; handler.removeCallbacks(ticker); invalidate();
     }
-
-    private void startHolding() {
-        isHolding = true;
-        secondsLeft = (int) Math.ceil(holdDurationMs / 1000.0);
-        holdStartTime = System.currentTimeMillis();
-        performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
-        handler.removeCallbacks(tickRunnable);
-        handler.post(tickRunnable);
-        invalidate();
-    }
-
-    /** Releasing early always resets to zero: only a full hold fires the alert. */
-    private void stopHolding() {
-        isHolding = false;
-        handler.removeCallbacks(tickRunnable);
-        progress = 0f;
-        invalidate();
-    }
-
-    @Override
-    protected void onDetachedFromWindow() {
-        super.onDetachedFromWindow();
-        handler.removeCallbacks(tickRunnable);
-    }
-
-    private float dp(float value) {
-        return value * getResources().getDisplayMetrics().density;
+    @Override protected void onDetachedFromWindow() {
+        cancelHold(); super.onDetachedFromWindow();
     }
 }
+
 

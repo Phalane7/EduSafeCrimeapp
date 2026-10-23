@@ -1,134 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/light_blue"
-    android:fillViewport="true">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:paddingBottom="24dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="SETTINGS"
-            android:textColor="@color/ink"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Choose how EduSafe works on this device."
-            android:textColor="@color/muted"
-            android:textSize="14sp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:background="@drawable/bg_card"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="16dp">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Include location in reports"
-                    android:textColor="@color/ink"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Ask for location when you create an incident report."
-                    android:textColor="@color/muted"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switchLocation"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:contentDescription="Include location in new incident reports" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/bg_card"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="16dp">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Confirm emergency call"
-                    android:textColor="@color/ink"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Show a confirmation before opening the 112 dialler."
-                    android:textColor="@color/muted"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switchConfirmSos"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:contentDescription="Confirm before opening the emergency dialler" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:background="@drawable/bg_banner"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="YOUR DATA"
-                android:textColor="@color/light_blue"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="Profile preferences and incident reports are stored on this device. Staff tools are a local workspace; no campus service is connected."
-                android:textColor="@color/white"
-                android:textSize="14sp" />
-        </LinearLayout>
-    </LinearLayout>
-</ScrollView>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#E8EEFF" android:fillViewport="true" android:clipToPadding="false">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="22dp" android:paddingBottom="26dp">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+<TextView android:layout_width="40dp" android:layout_height="40dp" android:gravity="center" android:text="‹" android:textSize="30sp" android:textColor="#0E2B6A" android:background="@drawable/es_settings_back" android:contentDescription="Back to Profile" android:id="@+id/btnSettingsBack" android:clickable="true" android:focusable="true"/>
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="12dp" android:orientation="vertical"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Settings" android:textSize="24sp" android:textStyle="bold" android:textColor="#0C255B"/><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Choose how EduSafe works on this device." android:textSize="12sp" android:textColor="#5B6D94"/></LinearLayout>
+</LinearLayout>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:minHeight="82dp" android:gravity="center_vertical" android:orientation="horizontal" android:padding="12dp" android:background="@drawable/es_settings_card" android:elevation="2dp">
+<TextView android:layout_width="42dp" android:layout_height="42dp" android:gravity="center" android:text="♧" android:textSize="22sp" android:textColor="#0088A8" android:background="@drawable/es_settings_blue_icon" android:contentDescription="Location icon"/>
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="12dp" android:orientation="vertical"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Include location in reports" android:textColor="#071C49" android:textSize="13sp" android:textStyle="bold"/><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Ask for location when you create an incident report." android:textColor="#647598" android:textSize="11sp"/></LinearLayout>
+<androidx.appcompat.widget.SwitchCompat android:id="@+id/switchLocation" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="5dp" android:contentDescription="Include location in reports" app:thumbTint="#FFFFFF" app:trackTint="#132F77" app:showText="false"/>
+</LinearLayout>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:minHeight="82dp" android:gravity="center_vertical" android:orientation="horizontal" android:padding="12dp" android:background="@drawable/es_settings_card" android:elevation="2dp">
+<TextView android:layout_width="42dp" android:layout_height="42dp" android:gravity="center" android:text="☎" android:textSize="21sp" android:textColor="#DB2D69" android:background="@drawable/es_settings_pink_icon" android:contentDescription="Phone icon"/>
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="12dp" android:orientation="vertical"><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Confirm emergency call" android:textColor="#071C49" android:textSize="13sp" android:textStyle="bold"/><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Show a confirmation before opening the 112 dialler." android:textColor="#647598" android:textSize="11sp"/></LinearLayout>
+<androidx.appcompat.widget.SwitchCompat android:id="@+id/switchConfirmSos" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="5dp" android:contentDescription="Confirm emergency call" app:thumbTint="#FFFFFF" app:trackTint="#132F77" app:showText="false"/>
+</LinearLayout>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" android:padding="18dp" android:background="@drawable/es_settings_banner" android:elevation="5dp">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="♙  YOUR DATA" android:textColor="#9FD9FF" android:textSize="11sp" android:textStyle="bold" android:letterSpacing="0.07"/><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="9dp" android:text="Profile preferences are stored on this device. Safety reports and connected features may store data securely online." android:textColor="#FFFFFF" android:textSize="12sp" android:lineSpacingExtra="2dp"/>
+</LinearLayout>
+</LinearLayout></ScrollView>

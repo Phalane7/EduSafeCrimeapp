@@ -26,7 +26,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final int MAX_CONTACTS = 5;
 
     private static final String SECURITY_NAME = "Campus Security";
-    private static final String SECURITY_PHONE = "0111112222";
+    private static final String SECURITY_PHONE = "0713247336";
 
     private static DatabaseHelper instance;
 

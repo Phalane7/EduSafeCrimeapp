@@ -1,6 +1,18 @@
 package com.example.edusafe;
 
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
+
+import org.json.JSONObject;
+
+import java.io.IOException;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.LayoutInflater;
@@ -53,6 +65,10 @@ public class ProfileFragment extends Fragment {
                 .setOnClickListener(v ->
                         open(new IncidentHistoryFragment()));
 
+        // MY SOS ALERTS
+        view.findViewById(R.id.btnSosAlerts)
+                .setOnClickListener(v -> open(new MySosAlertsFragment()));
+
         // TRUSTED CONTACTS
         view.findViewById(R.id.btnContacts)
                 .setOnClickListener(v ->
@@ -68,7 +84,16 @@ public class ProfileFragment extends Fragment {
                 .setOnClickListener(v ->
                         open(new SettingsFragment()));
 
+        // Make each entire rounded menu card tappable, not only its label.
+        int[] menuIds = {R.id.btnReports, R.id.btnSosAlerts, R.id.btnContacts, R.id.btnHelp, R.id.btnSettings};
+        for (int menuId : menuIds) {
+            View label = view.findViewById(menuId);
+            if (label != null && label.getParent() instanceof View) {
+                ((View) label.getParent()).setOnClickListener(v -> label.performClick());
+            }
+        }
         renderProfile();
+        loadRegisteredNameFromSupabase();
 
         return view;
     }
@@ -119,6 +144,58 @@ public class ProfileFragment extends Fragment {
                             : "E"
             );
         }
+    }
+
+    // Fetch the registered student's name from Supabase Auth.
+    // The access token identifies the currently logged-in account.
+    private void loadRegisteredNameFromSupabase() {
+        SharedPreferences session = requireContext().getSharedPreferences(
+                "edusafe_supabase_session", 0);
+        String token = session.getString("access_token", "");
+        if (token == null || token.isEmpty()) return;
+
+        Request request = new Request.Builder()
+                .url(SupabaseConfig.SUPABASE_URL + "/auth/v1/user")
+                .addHeader("apikey", SupabaseConfig.SUPABASE_KEY)
+                .addHeader("Authorization", "Bearer " + token)
+                .get()
+                .build();
+
+        new OkHttpClient().newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                // Keep existing local profile visible if offline.
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response)
+                    throws IOException {
+                try (Response res = response) {
+                    if (!res.isSuccessful() || res.body() == null) return;
+                    JSONObject user = new JSONObject(res.body().string());
+                    JSONObject metadata = user.optJSONObject("user_metadata");
+                    if (metadata == null) return;
+                    String first = metadata.optString("first_name", "").trim();
+                    String last = metadata.optString("surname", "").trim();
+                    if (first.isEmpty() && last.isEmpty()) return;
+                    String email = user.optString("email", "");
+                    String phone = metadata.optString("phone", "");
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        if (!isAdded() || tvName == null) return;
+                        profile.edit()
+                                .putString("first_name", first)
+                                .putString("surname", last)
+                                .putString("display_name", (first + " " + last).trim())
+                                .putString("email", email)
+                                .putString("phone", phone)
+                                .apply();
+                        renderProfile();
+                    });
+                } catch (Exception ignored) {
+                    // Keep the local profile if Supabase response is unavailable.
+                }
+            }
+        });
     }
 
     // EDIT PROFILE DIALOG
@@ -340,4 +417,6 @@ public class ProfileFragment extends Fragment {
         super.onDestroyView();
     }
 }
+
+
 

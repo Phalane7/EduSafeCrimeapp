@@ -2,158 +2,133 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_sos_gradient">
+    android:background="@drawable/bg_emergency_sos_red">
 
-    <ImageView
-        android:id="@+id/shieldIcon"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:layout_marginStart="36dp"
+    <TextView
+        android:id="@+id/sosTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:contentDescription="EduSafe"
-        android:src="@drawable/ic_shield"
-        app:layout_constraintStart_toStartOf="parent"
+        android:text="Emergency SOS"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:textSize="22sp"
         app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="HardcodedText" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:text="EduSafe"
-        android:textColor="@color/white"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        app:layout_constraintBottom_toBottomOf="@id/shieldIcon"
-        app:layout_constraintStart_toEndOf="@id/shieldIcon"
-        app:layout_constraintTop_toTopOf="@id/shieldIcon" />
-
-    <FrameLayout
-        android:id="@+id/notificationsButton"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="28dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:clickable="true"
-        android:contentDescription="Open Safety News Feed"
-        android:focusable="true"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <ImageView
-            android:layout_width="26dp"
-            android:layout_height="26dp"
-            android:layout_gravity="center"
-            android:contentDescription="Safety News Feed"
-            android:src="@drawable/ic_bell" />
-    </FrameLayout>
-
-    <TextView
-        android:id="@+id/headlineLine1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="36dp"
-        android:layout_marginTop="22dp"
-        android:text="Emergency"
-        android:textColor="@color/white"
-        android:textSize="36sp"
-        android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/shieldIcon" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <TextView
-        android:id="@+id/headlineLine2"
+        android:id="@+id/liveSosButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="SOS"
-        android:textColor="@color/white"
-        android:textSize="36sp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginTop="27dp"
+        android:paddingStart="11dp"
+        android:paddingEnd="11dp"
+        android:paddingTop="7dp"
+        android:paddingBottom="7dp"
+        android:text="● Live SOS"
+        android:textColor="#FFFFFF"
         android:textStyle="bold"
-        app:layout_constraintStart_toStartOf="@id/headlineLine1"
-        app:layout_constraintTop_toBottomOf="@id/headlineLine1" />
+        android:textSize="12sp"
+        android:background="@drawable/bg_sos_hint_card"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="Return to your active SOS"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <TextView
-        android:id="@+id/subtitleText"
+        android:id="@+id/sosInstructions"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:layout_marginEnd="36dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:gravity="center"
+        android:text="Press and hold the button to send an\nemergency alert."
+        android:textColor="#F3C9CA"
+        android:textSize="13sp"
         android:lineSpacingExtra="3dp"
-        android:text="We'll alert your contacts and share\nyour live location the moment you hold."
-        android:textColor="@color/muted_pink_text"
-        android:textSize="12sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="@id/headlineLine1"
-        app:layout_constraintTop_toBottomOf="@id/headlineLine2" />
+        app:layout_constraintTop_toBottomOf="@id/sosTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <com.example.edusafe.ui.sos.HoldProgressButton
         android:id="@+id/holdProgressRing"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="12dp"
-        app:layout_constraintBottom_toTopOf="@id/voicePill"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        app:layout_constraintTop_toBottomOf="@id/sosInstructions"
+        app:layout_constraintBottom_toTopOf="@id/holdHint"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/subtitleText" />
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <TextView
+        android:id="@+id/holdHint"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="28dp"
+        android:layout_marginEnd="28dp"
+        android:padding="16dp"
+        android:gravity="center"
+        android:text="Press and hold for 4 seconds to activate"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:background="@drawable/bg_sos_hint_card"
+        app:layout_constraintBottom_toTopOf="@id/voicePill"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <LinearLayout
         android:id="@+id/voicePill"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="36dp"
-        android:layout_marginEnd="36dp"
-        android:layout_marginBottom="20dp"
-        android:background="@drawable/bg_voice_pill"
-        android:clickable="true"
-        android:focusable="true"
-        android:foreground="?attr/selectableItemBackground"
+        android:layout_marginStart="28dp"
+        android:layout_marginEnd="28dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="16dp"
+        android:padding="14dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="8dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="@drawable/bg_sos_hint_card"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <FrameLayout
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@drawable/bg_navy_circle">
-
-            <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:layout_gravity="center"
-                android:contentDescription="Voice SOS"
-                android:src="@drawable/ic_megaphone" />
-        </FrameLayout>
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_megaphone"
+            android:contentDescription="Voice SOS" />
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:orientation="vertical">
-
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Or say &#8220;Help me&#8221;"
-                android:textColor="@color/ink"
+                android:text="Or say ‘Help me’"
+                android:textColor="#FFFFFF"
                 android:textSize="15sp"
                 android:textStyle="bold" />
-
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Tap to speak an SOS command"
-                android:textColor="#6B6B6B"
-                android:textSize="11sp" />
+                android:layout_marginTop="3dp"
+                android:text="Tap to activate voice SOS"
+                android:textColor="#F0B8BD"
+                android:textSize="12sp" />
         </LinearLayout>
     </LinearLayout>
-
 </androidx.constraintlayout.widget.ConstraintLayout>
+

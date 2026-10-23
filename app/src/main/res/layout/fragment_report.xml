@@ -1,235 +1,37 @@
-<?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:fillViewport="true">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="REPORT INCIDENT"
-            android:textColor="@color/ink"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            android:id="@+id/formGroup"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Type of incident"
-                android:textColor="@color/muted"
-                android:textSize="13sp" />
-
-            <LinearLayout
-                android:id="@+id/chipRow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="vertical" />
-
-            <EditText
-                android:id="@+id/etDesc"
-                android:layout_width="match_parent"
-                android:layout_height="130dp"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_card"
-                android:contentDescription="Describe what happened, when and where"
-                android:gravity="top"
-                android:hint="What happened, when and where?"
-                android:importantForAutofill="no"
-                android:inputType="textMultiLine|textCapSentences"
-                android:padding="14dp"
-                android:textColor="@color/ink"
-                android:textColorHint="@color/muted"
-                android:textSize="16sp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="120dp"
-                android:layout_marginTop="12dp"
-                android:orientation="horizontal">
-
-                <LinearLayout
-                    android:id="@+id/tilePhoto"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_card"
-                    android:clickable="true"
-                    android:contentDescription="Add a photo"
-                    android:focusable="true"
-                    android:gravity="center"
-                    android:orientation="vertical">
-
-                    <ImageView
-                        android:id="@+id/ivPhoto"
-                        android:layout_width="56dp"
-                        android:layout_height="56dp"
-                        android:importantForAccessibility="no"
-                        android:scaleType="centerCrop"
-                        android:src="@drawable/ic_camera"
-                        android:tint="@color/navy" />
-
-                    <TextView
-                        android:id="@+id/tvPhoto"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="Add photo"
-                        android:textColor="@color/navy"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
+<?xml version='1.0' encoding='utf-8'?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:background="@drawable/report_page_bg" android:clipToPadding="false">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp" android:paddingBottom="28dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Report Incident" android:textSize="22sp" android:textColor="#10285A" android:textStyle="bold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Help keep campus safe. It only takes a minute." android:textSize="11sp" android:textColor="#6980A5" android:layout_marginTop="3dp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:id="@+id/formGroup" android:layout_marginTop="18dp">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="TYPE OF INCIDENT" android:textSize="11sp" android:textColor="#4F6DA4" android:textStyle="bold" android:letterSpacing="0.06" />
+            <LinearLayout android:id="@+id/chipRow" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="5dp" />
+            <EditText android:id="@+id/etDesc" android:layout_width="match_parent" android:layout_height="136dp" android:layout_marginTop="12dp" android:background="@drawable/report_white_card" android:hint="What happened, when and where?" android:textColorHint="#7A8CAC" android:textColor="#102C62" android:textSize="14sp" android:gravity="top" android:padding="14dp" android:inputType="textMultiLine|textCapSentences" android:importantForAutofill="no" android:contentDescription="Describe what happened, when and where" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="118dp" android:orientation="horizontal" android:layout_marginTop="10dp">
+                <LinearLayout android:id="@+id/tilePhoto" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:gravity="center" android:background="@drawable/report_tile_card" android:clickable="true" android:focusable="true" android:contentDescription="Add photo or video" android:layout_marginEnd="4dp">
+                    <ImageView android:id="@+id/ivPhoto" android:layout_width="46dp" android:layout_height="46dp" android:src="@drawable/ic_camera" android:tint="#2856C6" android:padding="10dp" android:background="@drawable/report_icon_circle" android:importantForAccessibility="no" android:scaleType="centerCrop" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Add photo or video" android:textSize="12sp" android:textColor="#102C62" android:id="@+id/tvPhoto" android:textStyle="bold" android:gravity="center" android:layout_marginTop="8dp" android:paddingHorizontal="4dp" />
                 </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/tileLocation"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_card"
-                    android:clickable="true"
-                    android:contentDescription="Tag your location"
-                    android:focusable="true"
-                    android:gravity="center"
-                    android:orientation="vertical">
-
-                    <ImageView
-                        android:id="@+id/tvDot"
-                        android:layout_width="56dp"
-                        android:layout_height="56dp"
-                        android:importantForAccessibility="no"
-                        android:src="@drawable/ic_location"
-                        android:tint="@color/muted" />
-
-                    <TextView
-                        android:id="@+id/tvLocation"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:gravity="center"
-                        android:text="Locating…"
-                        android:textColor="@color/navy"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
+                <LinearLayout android:id="@+id/tileLocation" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:gravity="center" android:background="@drawable/report_tile_card" android:clickable="true" android:focusable="true" android:contentDescription="Locating…" android:layout_marginStart="4dp">
+                    <ImageView android:id="@+id/tvDot" android:layout_width="46dp" android:layout_height="46dp" android:src="@drawable/ic_location" android:tint="#2856C6" android:padding="10dp" android:background="@drawable/report_icon_circle" android:importantForAccessibility="no" android:scaleType="centerCrop" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Locating…" android:textSize="12sp" android:textColor="#102C62" android:id="@+id/tvLocation" android:textStyle="bold" android:gravity="center" android:layout_marginTop="8dp" android:paddingHorizontal="4dp" />
                 </LinearLayout>
             </LinearLayout>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/bg_card"
-                android:backgroundTint="@color/glass_red"
-                android:padding="14dp"
-                android:text="Time stamped on submit. Sent to campus security, and on the map once verified. Your identity is never shown."
-                android:textColor="@color/ink"
-                android:textSize="13sp" />
-
-            <TextView
-                android:id="@+id/btnSubmit"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/bg_button_red"
-                android:clickable="true"
-                android:contentDescription="Submit report"
-                android:focusable="true"
-                android:gravity="center"
-                android:minHeight="52dp"
-                android:text="Submit"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/report_info_bg" android:padding="12dp" android:layout_marginTop="10dp">
+                <TextView android:layout_width="26dp" android:layout_height="wrap_content" android:text="ⓘ" android:textSize="18sp" android:textColor="#2856C6" />
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:text="Time stamped on submit. Sent to campus security, and on the map once verified. Your identity is never shown." android:textSize="11sp" android:textColor="#284676" android:layout_weight="1" />
+            </LinearLayout>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Submit report  →" android:textSize="15sp" android:textColor="#FFFFFF" android:id="@+id/btnSubmit" android:gravity="center" android:textStyle="bold" android:background="@drawable/report_button_bg" android:minHeight="54dp" android:layout_marginTop="14dp" android:clickable="true" android:focusable="true" android:contentDescription="Submit report" />
         </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/successGroup"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Report saved"
-                    android:textColor="@color/ink"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="It is saved on your phone and will be sent to campus security as soon as you are online."
-                    android:textColor="@color/ink"
-                    android:textSize="15sp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="Your tracking code:"
-                    android:textColor="@color/muted"
-                    android:textSize="13sp" />
-
-                <TextView
-                    android:id="@+id/tvCode"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:letterSpacing="0.1"
-                    android:textColor="@color/navy"
-                    android:textIsSelectable="true"
-                    android:textSize="32sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Keep this code. It is how you check your report's status without revealing who you are."
-                    android:textColor="@color/muted"
-                    android:textSize="13sp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:id="@+id/successGroup" android:visibility="gone" android:layout_marginTop="20dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/report_white_card" android:padding="18dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Report saved" android:textSize="19sp" android:textColor="#102C62" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="It is saved on your phone and will be sent to campus security as soon as you are online." android:textSize="14sp" android:textColor="#425D86" android:layout_marginTop="8dp" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Your tracking code:" android:textSize="12sp" android:textColor="#6980A5" android:layout_marginTop="14dp" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="" android:textSize="28sp" android:textColor="#2856C6" android:id="@+id/tvCode" android:textStyle="bold" android:textIsSelectable="true" android:layout_marginTop="4dp" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Keep this code. It is how you check your report's status without revealing who you are." android:textSize="12sp" android:textColor="#6980A5" android:layout_marginTop="10dp" />
             </LinearLayout>
-
-            <TextView
-                android:id="@+id/btnAnother"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/bg_chip_selected"
-                android:clickable="true"
-                android:contentDescription="Report another incident"
-                android:focusable="true"
-                android:gravity="center"
-                android:minHeight="52dp"
-                android:text="Report another incident"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Report another incident" android:textSize="15sp" android:textColor="#FFFFFF" android:id="@+id/btnAnother" android:background="@drawable/report_button_bg" android:gravity="center" android:minHeight="52dp" android:layout_marginTop="16dp" android:clickable="true" android:focusable="true" android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

@@ -37,7 +37,6 @@ public class IncidentHistoryFragment extends Fragment {
             "Theft",
             "Assault",
             "Harassment",
-            "Suspicious Activity",
             "Other"
     };
 
@@ -47,6 +46,7 @@ public class IncidentHistoryFragment extends Fragment {
 
     private TextView tvEmpty;
     private TextView tvFooter;
+    private View emptyState;
 
     private LinearLayout listContainer;
     private LinearLayout chipPanel;
@@ -70,10 +70,12 @@ public class IncidentHistoryFragment extends Fragment {
 
         tvEmpty = v.findViewById(R.id.tvEmpty);
         tvFooter = v.findViewById(R.id.tvFooter);
+        emptyState = v.findViewById(R.id.emptyState);
         listContainer = v.findViewById(R.id.listContainer);
         chipPanel = v.findViewById(R.id.chipPanel);
 
         setupFilters();
+        chipPanel.setVisibility(View.VISIBLE);
 
         // Show or hide category filters
         v.findViewById(R.id.btnFilter).setOnClickListener(x -> {
@@ -184,7 +186,7 @@ public class IncidentHistoryFragment extends Fragment {
         tv.setTextSize(12);
         tv.setTypeface(null, Typeface.BOLD);
         tv.setGravity(Gravity.CENTER);
-        tv.setMinHeight(dp(44));
+        tv.setMinHeight(dp(34));
         tv.setContentDescription("Filter by " + label);
 
         LinearLayout.LayoutParams lp =
@@ -228,8 +230,8 @@ public class IncidentHistoryFragment extends Fragment {
 
         tv.setBackgroundResource(
                 selected
-                        ? R.drawable.bg_chip_selected
-                        : R.drawable.bg_chip
+                        ? R.drawable.hist_chip_selected
+                        : R.drawable.hist_chip_normal
         );
 
         tv.setTextColor(
@@ -240,12 +242,7 @@ public class IncidentHistoryFragment extends Fragment {
                 )
         );
 
-        tv.setPadding(
-                dp(8),
-                dp(8),
-                dp(8),
-                dp(8)
-        );
+        tv.setPadding(dp(5), dp(7), dp(5), dp(7));
     }
 
     // LOAD ONLY THE USER'S SAVED REPORTS
@@ -310,20 +307,21 @@ public class IncidentHistoryFragment extends Fragment {
             toast("Couldn't load reports. Please try again.");
         }
 
-        tvEmpty.setVisibility(
-                count == 0 ? View.VISIBLE : View.GONE
-        );
+        tvEmpty.setVisibility(View.GONE);
+        emptyState.setVisibility(count == 0 ? View.VISIBLE : View.GONE);
 
         if (failed) {
             tvEmpty.setText("Couldn't load reports. Please try again.");
+            ((TextView) emptyState.findViewById(R.id.emptyTitle)).setText("Couldn't load reports");
+            ((TextView) emptyState.findViewById(R.id.emptySubtitle)).setText("Please try again in a moment.");
         } else if ("All".equals(filter)) {
-            tvEmpty.setText(
-                    "You haven't submitted any reports yet."
-            );
+            tvEmpty.setText("You haven't submitted any reports yet.");
+            ((TextView) emptyState.findViewById(R.id.emptyTitle)).setText("No reports yet");
+            ((TextView) emptyState.findViewById(R.id.emptySubtitle)).setText("You haven't submitted any reports yet. Once you do, they'll show up here with their status.");
         } else {
-            tvEmpty.setText(
-                    "No reports of this type."
-            );
+            tvEmpty.setText("No reports of this type.");
+            ((TextView) emptyState.findViewById(R.id.emptyTitle)).setText("No matching reports");
+            ((TextView) emptyState.findViewById(R.id.emptySubtitle)).setText("Try another incident category to see your reports.");
         }
 
         tvFooter.setVisibility(
@@ -683,4 +681,6 @@ public class IncidentHistoryFragment extends Fragment {
         );
     }
 }
+
+
 

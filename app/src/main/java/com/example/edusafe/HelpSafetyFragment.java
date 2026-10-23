@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Typeface;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
@@ -200,14 +202,14 @@ public class HelpSafetyFragment extends Fragment {
     private TextView makeChip(String name) {
         TextView chip = new TextView(requireContext());
         chip.setText(name);
-        chip.setTextSize(14);
+        chip.setTextSize(12);
         chip.setTypeface(null, Typeface.BOLD);
         chip.setGravity(Gravity.CENTER);
-        chip.setMinHeight(dp(48));
+        chip.setMinHeight(dp(36));
         chip.setContentDescription("Show " + name + " tips");
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        params.setMargins(0, dp(4), dp(8), dp(4));
+        params.setMargins(dp(2), dp(3), dp(2), dp(3));
         chip.setLayoutParams(params);
         styleChip(chip, name.equals(category));
         chip.setOnClickListener(v -> {
@@ -221,8 +223,9 @@ public class HelpSafetyFragment extends Fragment {
     }
 
     private void styleChip(TextView chip, boolean selected) {
-        chip.setBackgroundResource(selected ? R.drawable.bg_chip_selected : R.drawable.bg_chip);
-        chip.setTextColor(requireContext().getColor(selected ? R.color.white : R.color.navy));
+        GradientDrawable bg = rounded(selected ? Color.rgb(35, 77, 183) : Color.TRANSPARENT, 12);
+        chip.setBackground(bg);
+        chip.setTextColor(selected ? Color.WHITE : Color.rgb(32, 61, 113));
     }
 
     private void renderTips() {
@@ -236,6 +239,7 @@ public class HelpSafetyFragment extends Fragment {
                     .toLowerCase(Locale.ROOT).contains(search)) continue;
             View row = tipRow(tipsContainer, iconFor(tip.title), tip.title, tip.text);
             row.setContentDescription(tip.title + ". " + tip.text);
+            styleTipRow(row);
             tipsContainer.addView(row);
             count++;
         }
@@ -250,13 +254,66 @@ public class HelpSafetyFragment extends Fragment {
         return R.drawable.ic_location;
     }
 
+    private GradientDrawable rounded(int color, int radiusDp) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(color);
+        drawable.setCornerRadius(dp(radiusDp));
+        return drawable;
+    }
+
+    private void styleTipRow(View row) {
+        row.setBackground(rounded(Color.WHITE, 18));
+        row.setPadding(dp(12), dp(12), dp(12), dp(12));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.bottomMargin = dp(8);
+        row.setLayoutParams(lp);
+        TextView title = row.findViewById(R.id.tvTipTitle);
+        TextView detail = row.findViewById(R.id.tvTipText);
+        title.setTextColor(Color.rgb(16, 39, 83));
+        detail.setTextColor(Color.rgb(99, 119, 155));
+        title.setTextSize(14);
+        detail.setTextSize(12);
+    }
+
     private View emergencyRow(String label, String number) {
-        View row = tipRow(emergencyContainer, R.drawable.ic_call,
-                label, "Tap to dial: " + number);
-        row.setBackgroundTintList(ColorStateList.valueOf(
-                requireContext().getColor(R.color.glass_red)));
-        ImageView icon = row.findViewById(R.id.tvIcon);
-        icon.setImageTintList(ColorStateList.valueOf(requireContext().getColor(R.color.red)));
+        LinearLayout row = new LinearLayout(requireContext());
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(dp(14), dp(10), dp(14), dp(10));
+        row.setBackground(rounded(Color.rgb(207, 20, 83), 18));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(65));
+        lp.bottomMargin = dp(9);
+        row.setLayoutParams(lp);
+
+        ImageView icon = new ImageView(requireContext());
+        icon.setImageResource(R.drawable.ic_call);
+        icon.setImageTintList(ColorStateList.valueOf(Color.rgb(207, 20, 83)));
+        icon.setPadding(dp(11), dp(11), dp(11), dp(11));
+        icon.setBackground(rounded(Color.WHITE, 50));
+        row.addView(icon, new LinearLayout.LayoutParams(dp(42), dp(42)));
+
+        LinearLayout labels = new LinearLayout(requireContext());
+        labels.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams labelsLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        labelsLp.leftMargin = dp(12);
+        row.addView(labels, labelsLp);
+        TextView title = new TextView(requireContext());
+        title.setText(label);
+        title.setTextSize(12);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setTextColor(Color.WHITE);
+        labels.addView(title);
+        TextView phone = new TextView(requireContext());
+        phone.setText(number);
+        phone.setTextSize(19);
+        phone.setTypeface(null, Typeface.BOLD);
+        phone.setTextColor(Color.WHITE);
+        labels.addView(phone);
+        TextView arrow = new TextView(requireContext());
+        arrow.setText("›");
+        arrow.setTextSize(28);
+        arrow.setTextColor(Color.WHITE);
+        row.addView(arrow);
         row.setContentDescription("Dial " + label + " on " + number);
         row.setClickable(true);
         row.setFocusable(true);

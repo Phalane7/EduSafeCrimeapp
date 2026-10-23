@@ -46,7 +46,7 @@ public class ReportIncidentFragment extends Fragment {
     private static final String TAG = "EduSafe";
     private static final long MAX_PHOTO_BYTES = 5L * 1024 * 1024;
     private static final long MAX_VIDEO_BYTES = 25L * 1024 * 1024;
-    private static final String[] TYPES = {"Robbery", "Theft", "Assault", "Harassment", "Suspicious Activity", "Other"};
+    private static final String[] TYPES = {"Robbery", "Theft", "Assault", "Harassment", "Other"};
 
     private String selectedType;
     private final List<TextView> chips = new ArrayList<>();
@@ -101,7 +101,12 @@ public class ReportIncidentFragment extends Fragment {
             TextView chip = makeChip(TYPES[i]);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-            lp.setMargins(0, dp(4), dp(8), dp(4));
+            lp.setMargins(dp(3), dp(3), dp(3), dp(3));
+            if (i == TYPES.length - 1) {
+                lp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                lp.setMargins(dp(3), dp(3), dp(3), dp(3));
+            }
             chip.setLayoutParams(lp);
             chip.setGravity(Gravity.CENTER);
             row.addView(chip);
@@ -131,8 +136,8 @@ public class ReportIncidentFragment extends Fragment {
         tv.setText(label);
         tv.setTextSize(14);
         tv.setTypeface(null, Typeface.BOLD);
-        tv.setGravity(Gravity.CENTER_VERTICAL);
-        tv.setMinHeight(dp(48));
+        tv.setGravity(Gravity.CENTER);
+        tv.setMinHeight(dp(44));
         tv.setContentDescription(label + " incident type");
         styleChip(tv, false);
         tv.setOnClickListener(x -> {
@@ -143,9 +148,9 @@ public class ReportIncidentFragment extends Fragment {
     }
 
     private void styleChip(TextView tv, boolean on) {
-        tv.setBackgroundResource(on ? R.drawable.bg_chip_selected : R.drawable.bg_chip);
+        tv.setBackgroundResource(on ? R.drawable.report_category_selected : R.drawable.report_category_normal);
         tv.setTextColor(requireContext().getColor(on ? R.color.white : R.color.navy));
-        tv.setPadding(dp(16), dp(10), dp(16), dp(10));
+        tv.setPadding(dp(8), dp(8), dp(8), dp(8));
     }
 
     private boolean locationEnabledInSettings() {
@@ -405,3 +410,4 @@ public class ReportIncidentFragment extends Fragment {
         return (int) (value * getResources().getDisplayMetrics().density);
     }
 }
+

@@ -1,13 +1,23 @@
 package com.example.edusafe;
 
 import android.content.Context;
-import android.content.SharedPreferences;
+import android.content.Intent;
+import android.net.Uri;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.util.UUID;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Base64;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,8 +28,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -28,800 +36,499 @@ import androidx.fragment.app.Fragment;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.UUID;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
+/** Student-only shared EduSafe news feed. Admin moderation uses a separate screen. */
 public class FeedFragment extends Fragment {
-
-    private static final String PREFS = "edusafe_local_feed";
-    private static final String POSTS_KEY = "posts";
-    private static final int MAX_PHOTO_BYTES = 5 * 1024 * 1024;
-
+    private static final String PHOTO_BUCKET = "feed-photos";
+    private Uri selectedPhoto;
     private EditText etPost;
+    private TextView tvPost, tvEmpty, tvAddPhoto;
     private ImageView ivPreview;
-    private TextView tvAddPhoto, tvPost, tvEmpty;
     private LinearLayout listContainer;
+    private ActivityResultLauncher<Intent> choosePhoto;
+    private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+    private final OkHttpClient http = new OkHttpClient();
+    private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    private final Handler main = new Handler(Looper.getMainLooper());
+    private final List<Post> posts = new ArrayList<>();
+    private final Map<String, List<Comment>> commentsByPost = new HashMap<>();
+    private final Map<String, Integer> likesByPost = new HashMap<>();
+    private final Set<String> likedByMe = new HashSet<>();
+    private boolean busy = false;
+    private boolean student = false;
+    private String myId = "";
 
-    private SharedPreferences prefs;
-    private String selectedPhotoPath;
+    private static class Post {
+        String id, authorId, body, imagePath;
+        long createdAt;
+    }
+    private static class Comment {
+        String id, postId, authorId, body;
+        long createdAt;
+    }
 
-    private final ActivityResultLauncher<String> pickPhoto =
-            registerForActivityResult(
-                    new ActivityResultContracts.GetContent(),
-                    this::handleSelectedPhoto
-            );
-
-    @Nullable
     @Override
-    public View onCreateView(
-            @NonNull LayoutInflater inflater,
-            @Nullable ViewGroup container,
-            @Nullable Bundle savedInstanceState) {
-
-        View view = inflater.inflate(
-                R.layout.fragment_feed, container, false
-        );
-
-        prefs = requireContext().getSharedPreferences(
-                PREFS, Context.MODE_PRIVATE
-        );
-
-        etPost = view.findViewById(R.id.etPost);
-        ivPreview = view.findViewById(R.id.ivPreview);
-        tvAddPhoto = view.findViewById(R.id.tvAddPhoto);
-        tvPost = view.findViewById(R.id.tvPost);
-        tvEmpty = view.findViewById(R.id.tvEmpty);
-        listContainer = view.findViewById(R.id.listContainer);
-
-        tvAddPhoto.setOnClickListener(v ->
-                pickPhoto.launch("image/*")
-        );
-
-        tvPost.setOnClickListener(v -> createPost());
-
-        displayPosts();
-
-        return view;
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        choosePhoto = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(), result -> {
+                    if (result.getResultCode() != android.app.Activity.RESULT_OK
+                            || result.getData() == null) return;
+                    Uri uri = result.getData().getData();
+                    if (uri == null) return;
+                    selectedPhoto = uri;
+                    if (ivPreview != null) {
+                        ivPreview.setImageURI(uri);
+                        ivPreview.setVisibility(View.VISIBLE);
+                    }
+                    if (tvAddPhoto != null) tvAddPhoto.setText("Change photo");
+                });
     }
 
-    // ----------------------------------------------------
-    // CREATE POST
-    // ----------------------------------------------------
-
-    private void createPost() {
-
-        String message = etPost.getText().toString().trim();
-
-        if (message.length() < 5) {
-            etPost.setError("Please write at least 5 characters.");
-            etPost.requestFocus();
-            return;
-        }
-
-        try {
-            JSONArray posts = getPosts();
-
-            JSONObject post = new JSONObject();
-
-            post.put("id", UUID.randomUUID().toString());
-            post.put("text", message);
-            post.put("photo", selectedPhotoPath == null
-                    ? "" : selectedPhotoPath);
-            post.put("createdAt", System.currentTimeMillis());
-            post.put("likes", 0);
-            post.put("liked", false);
-            post.put("comments", new JSONArray());
-            post.put("mine", true);
-
-            JSONArray updated = new JSONArray();
-
-            // Newest post appears first.
-            updated.put(post);
-
-            for (int i = 0; i < posts.length(); i++) {
-                updated.put(posts.get(i));
-            }
-
-            savePosts(updated);
-
-            etPost.setText("");
-            selectedPhotoPath = null;
-
-            ivPreview.setImageDrawable(null);
+    @Nullable @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        View v = inflater.inflate(R.layout.fragment_feed, container, false);
+        etPost = v.findViewById(R.id.etPost);
+        tvPost = v.findViewById(R.id.tvPost);
+        tvEmpty = v.findViewById(R.id.tvEmpty);
+        tvAddPhoto = v.findViewById(R.id.tvAddPhoto);
+        ivPreview = v.findViewById(R.id.ivPreview);
+        listContainer = v.findViewById(R.id.listContainer);
+        if (selectedPhoto != null) {
+            ivPreview.setImageURI(selectedPhoto);
+            ivPreview.setVisibility(View.VISIBLE);
+            tvAddPhoto.setText("Change photo");
+        } else {
             ivPreview.setVisibility(View.GONE);
-            tvAddPhoto.setText("Add photo");
+        }
+        tvAddPhoto.setOnClickListener(x -> {
+            if (!student) { toast("Only students can add photos."); return; }
+            Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
+            pick.setType("image/*");
+            pick.addCategory(Intent.CATEGORY_OPENABLE);
+            choosePhoto.launch(Intent.createChooser(pick, "Choose a photo"));
+        });
+        tvPost.setOnClickListener(x -> publish());
+        refresh();
+        return v;
+    }
 
-            displayPosts();
+    @Override public void onResume() {
+        super.onResume();
+        if (listContainer != null) refresh();
+    }
 
-            toast("Post published successfully.");
+    private String token() {
+        SharedPreferences p = requireContext().getSharedPreferences(
+                "edusafe_supabase_session", Context.MODE_PRIVATE);
+        String t = p.getString("access_token", "");
+        if (t == null || t.isEmpty() || System.currentTimeMillis() >= p.getLong("expires_at", 0))
+            return "";
+        return t;
+    }
 
-        } catch (Exception e) {
-            toast("Unable to publish your post.");
+    private static String userIdFromToken(String token) {
+        try {
+            String[] parts = token.split("\\.");
+            byte[] bytes = Base64.decode(parts[1], Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
+            return new JSONObject(new String(bytes, StandardCharsets.UTF_8)).optString("sub", "");
+        } catch (Exception ignored) { return ""; }
+    }
+
+    private static String encoded(String value) {
+        try { return URLEncoder.encode(value, "UTF-8"); }
+        catch (Exception e) { return value; }
+    }
+
+    private String api(String table, String query) {
+        return SupabaseConfig.SUPABASE_URL + "/rest/v1/" + table + (query.isEmpty() ? "" : "?" + query);
+    }
+
+    private String request(String token, String method, String url, JSONObject body) throws Exception {
+        Request.Builder b = new Request.Builder().url(url)
+                .header("apikey", SupabaseConfig.SUPABASE_KEY)
+                .header("Authorization", "Bearer " + token)
+                .header("Accept", "application/json")
+                .header("Prefer", "return=representation");
+        if ("POST".equals(method)) b.post(RequestBody.create(JSON, body.toString()));
+        else if ("DELETE".equals(method)) b.delete();
+        else b.get();
+        try (Response response = http.newCall(b.build()).execute()) {
+            String text = response.body() == null ? "" : response.body().string();
+            if (!response.isSuccessful()) throw new IOException("HTTP " + response.code() + ": " + text);
+            return text;
         }
     }
 
-    // ----------------------------------------------------
-    // DISPLAY POSTS
-    // ----------------------------------------------------
+    private void refresh() {
+        if (!isAdded() || busy) return;
+        student = false;
+        String t = token();
+        if (t.isEmpty()) { toast("Session expired. Please log in again."); return; }
+        busy = true;
+        myId = userIdFromToken(t);
+        if (tvEmpty != null && posts.isEmpty()) {
+            tvEmpty.setVisibility(View.VISIBLE);
+            tvEmpty.setText("Loading news feed...");
+        }
+        worker.execute(() -> {
+            try {
+                JSONArray remotePosts = new JSONArray(request(t, "GET", api("feed_posts",
+                        "select=id,author_id,body,image_path,created_at&order=created_at.desc&limit=100"), null));
+                JSONArray remoteComments = new JSONArray(request(t, "GET", api("feed_comments",
+                        "select=id,post_id,author_id,body,created_at&order=created_at.asc&limit=2000"), null));
+                JSONArray remoteLikes = new JSONArray(request(t, "GET", api("feed_likes",
+                        "select=post_id,user_id&limit=10000"), null));
+                JSONArray roles = new JSONArray(request(t, "GET", api("user_roles",
+                        "select=role&user_id=eq." + encoded(myId)), null));
+                boolean isStudent = roles.length() > 0 && "student".equalsIgnoreCase(roles.getJSONObject(0).optString("role"));
+                if (!isStudent) throw new IOException("News Feed is for students only");
+                List<Post> p = new ArrayList<>();
+                Map<String, List<Comment>> c = new HashMap<>();
+                Map<String, Integer> counts = new HashMap<>();
+                Set<String> mine = new HashSet<>();
+                for (int i = 0; i < remotePosts.length(); i++) {
+                    JSONObject o = remotePosts.getJSONObject(i);
+                    Post post = new Post();
+                    post.id = o.optString("id"); post.authorId = o.optString("author_id");
+                    post.body = o.optString("body"); post.imagePath = o.isNull("image_path") ? "" : o.optString("image_path", ""); post.createdAt = timestamp(o.optString("created_at"));
+                    p.add(post);
+                }
+                for (int i = 0; i < remoteComments.length(); i++) {
+                    JSONObject o = remoteComments.getJSONObject(i);
+                    Comment comment = new Comment();
+                    comment.id = o.optString("id"); comment.postId = o.optString("post_id");
+                    comment.authorId = o.optString("author_id"); comment.body = o.optString("body");
+                    comment.createdAt = timestamp(o.optString("created_at"));
+                    if (!c.containsKey(comment.postId)) c.put(comment.postId, new ArrayList<>());
+                    c.get(comment.postId).add(comment);
+                }
+                for (int i = 0; i < remoteLikes.length(); i++) {
+                    JSONObject o = remoteLikes.getJSONObject(i);
+                    String id = o.optString("post_id");
+                    counts.put(id, counts.containsKey(id) ? counts.get(id) + 1 : 1);
+                    if (myId.equals(o.optString("user_id"))) mine.add(id);
+                }
+                main.post(() -> {
+                    busy = false;
+                    if (!isAdded() || listContainer == null) return;
+                    posts.clear(); posts.addAll(p);
+                    commentsByPost.clear(); commentsByPost.putAll(c);
+                    likesByPost.clear(); likesByPost.putAll(counts);
+                    likedByMe.clear(); likedByMe.addAll(mine);
+                    student = isStudent;
+                    displayPosts();
+                });
+            } catch (Exception e) { failure("Unable to load the shared feed", e); }
+        });
+    }
+
+    private static long timestamp(String iso) {
+        try { return Instant.parse(iso).toEpochMilli(); }
+        catch (Exception e) { return System.currentTimeMillis(); }
+    }
+
+    private void publish() {
+        if (busy || !student) { toast("Only students can publish posts."); return; }
+        String message = etPost.getText().toString().trim();
+        Uri image = selectedPhoto;
+        if (message.isEmpty() && image == null) { etPost.setError("Write something or add a photo."); return; }
+        if (!message.isEmpty() && message.length() < 5) { etPost.setError("Please write at least 5 characters."); return; }
+        executeMutation("Unable to publish post", t -> {
+            String path = null;
+            if (image != null) path = uploadPhoto(t, image);
+            try {
+                JSONObject o = new JSONObject().put("body", message);
+                if (path != null) o.put("image_path", path);
+                request(t, "POST", api("feed_posts", ""), o);
+            } catch (Exception e) {
+                if (path != null) try { deletePhoto(t, path); } catch (Exception ignored) { }
+                throw e;
+            }
+        }, () -> {
+            if (etPost != null) etPost.setText("");
+            selectedPhoto = null;
+            if (ivPreview != null) { ivPreview.setImageDrawable(null); ivPreview.setVisibility(View.GONE); }
+            if (tvAddPhoto != null) tvAddPhoto.setText("Add photo");
+            toast("Post published.");
+        });
+    }
+
+    // Compress and normalize photos so uploads are small and always JPEG.
+    private byte[] photoBytes(Uri uri) throws Exception {
+        BitmapFactory.Options bounds = new BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        try (InputStream in = requireContext().getContentResolver().openInputStream(uri)) {
+            BitmapFactory.decodeStream(in, null, bounds);
+        }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw new IOException("Invalid image");
+        BitmapFactory.Options opts = new BitmapFactory.Options();
+        opts.inSampleSize = 1;
+        while (Math.max(bounds.outWidth / opts.inSampleSize, bounds.outHeight / opts.inSampleSize) > 1600)
+            opts.inSampleSize *= 2;
+        Bitmap bitmap;
+        try (InputStream in = requireContext().getContentResolver().openInputStream(uri)) {
+            bitmap = BitmapFactory.decodeStream(in, null, opts);
+        }
+        if (bitmap == null) throw new IOException("Cannot read photo");
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 78, out);
+        bitmap.recycle();
+        byte[] bytes = out.toByteArray();
+        if (bytes.length > 5 * 1024 * 1024) throw new IOException("Photo is too large (max 5 MB)");
+        return bytes;
+    }
+
+    private String storageUrl(String path) {
+        return SupabaseConfig.SUPABASE_URL + "/storage/v1/object/" + PHOTO_BUCKET + "/" + path;
+    }
+
+    private String uploadPhoto(String token, Uri uri) throws Exception {
+        byte[] bytes = photoBytes(uri);
+        String path = myId + "/" + UUID.randomUUID() + ".jpg";
+        Request req = new Request.Builder().url(storageUrl(path))
+                .header("apikey", SupabaseConfig.SUPABASE_KEY)
+                .header("Authorization", "Bearer " + token)
+                .header("x-upsert", "false")
+                .post(RequestBody.create(MediaType.parse("image/jpeg"), bytes)).build();
+        try (Response res = http.newCall(req).execute()) {
+            if (!res.isSuccessful()) throw new IOException("Photo upload failed (" + res.code() + "): " +
+                    (res.body() == null ? "" : res.body().string()));
+        }
+        return path;
+    }
+
+    private void deletePhoto(String token, String path) throws Exception {
+        Request req = new Request.Builder().url(storageUrl(path))
+                .header("apikey", SupabaseConfig.SUPABASE_KEY)
+                .header("Authorization", "Bearer " + token).delete().build();
+        try (Response res = http.newCall(req).execute()) {
+            if (!res.isSuccessful()) throw new IOException("Could not remove photo");
+        }
+    }
+
+    private void loadPostPhoto(ImageView view, String path) {
+        view.setVisibility(View.VISIBLE);
+        view.setImageDrawable(null);
+        String t = token();
+        worker.execute(() -> {
+            try {
+                Request req = new Request.Builder().url(storageUrl(path))
+                        .header("apikey", SupabaseConfig.SUPABASE_KEY)
+                        .header("Authorization", "Bearer " + t).build();
+                byte[] data;
+                try (Response res = http.newCall(req).execute()) {
+                    if (!res.isSuccessful() || res.body() == null) throw new IOException("Photo not accessible");
+                    data = res.body().bytes();
+                }
+                Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                main.post(() -> {
+                    if (isAdded() && view.getParent() != null && bitmap != null) view.setImageBitmap(bitmap);
+                });
+            } catch (Exception e) { Log.w("EduSafeFeed", "Cannot load photo", e); }
+        });
+    }
+
+    private interface Mutation { void run(String token) throws Exception; }
+    private void executeMutation(String error, Mutation mutation, Runnable after) {
+        if (!isAdded() || busy) return;
+        String t = token();
+        if (t.isEmpty()) { toast("Session expired. Please log in again."); return; }
+        busy = true;
+        worker.execute(() -> {
+            try {
+                mutation.run(t);
+                main.post(() -> {
+                    busy = false;
+                    if (!isAdded()) return;
+                    if (after != null) after.run();
+                    refresh();
+                });
+            } catch (Exception e) { failure(error, e); }
+        });
+    }
+
+    private void failure(String message, Exception e) {
+        Log.e("EduSafeFeed", message, e);
+        main.post(() -> {
+            busy = false;
+            if (!isAdded()) return;
+            toast(message + ". Check connection or Supabase permissions.");
+            if (posts.isEmpty() && tvEmpty != null) {
+                tvEmpty.setVisibility(View.VISIBLE); tvEmpty.setText(message);
+            }
+        });
+    }
 
     private void displayPosts() {
-
         if (listContainer == null) return;
-
         listContainer.removeAllViews();
-
-        JSONArray posts = getPosts();
-
-        tvEmpty.setVisibility(
-                posts.length() == 0 ? View.VISIBLE : View.GONE
-        );
-
-        for (int i = 0; i < posts.length(); i++) {
-
-            JSONObject post = posts.optJSONObject(i);
-
-            if (post != null) {
-                listContainer.addView(createPostCard(post));
-            }
+        tvEmpty.setVisibility(posts.isEmpty() ? View.VISIBLE : View.GONE);
+        tvEmpty.setText("No posts yet. Be the first to share something.");
+        for (Post post : posts) {
+            View card = LayoutInflater.from(requireContext()).inflate(R.layout.item_post, listContainer, false);
+            TextView author = card.findViewById(R.id.tvAuthor);
+            TextView time = card.findViewById(R.id.tvTime);
+            TextView text = card.findViewById(R.id.tvText);
+            TextView like = card.findViewById(R.id.tvLike);
+            TextView comment = card.findViewById(R.id.tvCommentBtn);
+            TextView delete = card.findViewById(R.id.tvDelete);
+            ImageView photo = card.findViewById(R.id.ivPostPhoto);
+            author.setText(myId.equals(post.authorId) ? "You" : "Anonymous user");
+            time.setText(timeAgo(post.createdAt));
+            text.setText(post.body);
+            if (post.imagePath == null || post.imagePath.isEmpty()) photo.setVisibility(View.GONE);
+            else loadPostPhoto(photo, post.imagePath);
+            boolean liked = likedByMe.contains(post.id);
+            like.setText((liked ? "♥ " : "♡ ") + likesByPost.getOrDefault(post.id, 0));
+            like.setTextColor(liked ? Color.rgb(220, 40, 65) : requireContext().getColor(R.color.navy));
+            like.setOnClickListener(v -> toggleLike(post.id, liked));
+            List<Comment> list = commentsByPost.get(post.id);
+            comment.setText("♧ " + (list == null ? 0 : list.size()));
+            comment.setOnClickListener(v -> showComments(post.id));
+            if (myId.equals(post.authorId)) {
+                delete.setVisibility(View.VISIBLE);
+                delete.setOnClickListener(v -> new AlertDialog.Builder(requireContext())
+                        .setTitle("Delete post?")
+                        .setMessage("This post and its comments will be deleted for everyone.")
+                        .setNegativeButton("Cancel", null)
+                        .setPositiveButton("Delete", (d, w) -> executeMutation("Unable to delete post", t ->
+                                {
+                                    request(t, "DELETE", api("feed_posts", "id=eq." + encoded(post.id)), null);
+                                    if (post.imagePath != null && !post.imagePath.isEmpty())
+                                        try { deletePhoto(t, post.imagePath); } catch (Exception e) {
+                                            Log.w("EduSafeFeed", "Photo cleanup deferred", e);
+                                        }
+                                },
+                                () -> toast("Post deleted."))).show());
+            } else delete.setVisibility(View.GONE);
+            listContainer.addView(card);
         }
     }
 
-    private View createPostCard(JSONObject post) {
-
-        View card = LayoutInflater.from(requireContext())
-                .inflate(R.layout.item_post, listContainer, false);
-
-        TextView tvAuthor = card.findViewById(R.id.tvAuthor);
-        TextView tvTime = card.findViewById(R.id.tvTime);
-        TextView tvText = card.findViewById(R.id.tvText);
-        TextView tvLike = card.findViewById(R.id.tvLike);
-        TextView tvCommentBtn =
-                card.findViewById(R.id.tvCommentBtn);
-        TextView tvDelete = card.findViewById(R.id.tvDelete);
-        ImageView ivPhoto =
-                card.findViewById(R.id.ivPostPhoto);
-
-        String postId = post.optString("id");
-
-        tvAuthor.setText(
-                post.optBoolean("mine", false)
-                        ? "You"
-                        : "Anonymous student"
-        );
-
-        tvTime.setText(timeAgo(post.optLong("createdAt")));
-        tvText.setText(post.optString("text"));
-
-        String photo = post.optString("photo", "");
-
-        if (!photo.isEmpty()) {
-            showPhoto(ivPhoto, photo);
-        } else {
-            ivPhoto.setVisibility(View.GONE);
-        }
-
-        updateLikeButton(tvLike, post);
-
-        JSONArray comments = post.optJSONArray("comments");
-
-        int commentCount = comments == null
-                ? 0 : comments.length();
-
-        tvCommentBtn.setText("♧ " + commentCount);
-        tvCommentBtn.setContentDescription(
-                "View " + commentCount + " comments"
-        );
-
-        tvLike.setOnClickListener(v -> toggleLike(postId));
-
-        tvCommentBtn.setOnClickListener(v ->
-                showComments(postId)
-        );
-
-        if (post.optBoolean("mine", false)) {
-
-            tvDelete.setVisibility(View.VISIBLE);
-
-            tvDelete.setOnClickListener(v ->
-                    confirmDeletePost(postId)
-            );
-
-        } else {
-            tvDelete.setVisibility(View.GONE);
-        }
-
-        return card;
+    private void toggleLike(String postId, boolean liked) {
+        if (!student) { toast("Only students can like posts."); return; }
+        executeMutation("Unable to update like", t -> {
+            if (liked) request(t, "DELETE", api("feed_likes",
+                    "post_id=eq." + encoded(postId) + "&user_id=eq." + encoded(myId)), null);
+            else request(t, "POST", api("feed_likes", ""), new JSONObject().put("post_id", postId));
+        }, null);
     }
-
-    // ----------------------------------------------------
-    // LIKES
-    // ----------------------------------------------------
-
-    private void toggleLike(String postId) {
-
-        JSONArray posts = getPosts();
-
-        JSONObject post = findPost(posts, postId);
-
-        if (post == null) return;
-
-        try {
-            boolean liked = post.optBoolean("liked", false);
-            int likes = post.optInt("likes", 0);
-
-            post.put("liked", !liked);
-            post.put("likes", liked
-                    ? Math.max(0, likes - 1)
-                    : likes + 1);
-
-            savePosts(posts);
-            displayPosts();
-
-        } catch (Exception e) {
-            toast("Unable to update like.");
-        }
-    }
-
-    private void updateLikeButton(
-            TextView button, JSONObject post) {
-
-        boolean liked = post.optBoolean("liked", false);
-        int likes = post.optInt("likes", 0);
-
-        button.setText((liked ? "♥ " : "♡ ") + likes);
-
-        button.setTextColor(
-                liked
-                        ? Color.rgb(220, 40, 65)
-                        : requireContext().getColor(R.color.navy)
-        );
-
-        button.setContentDescription(
-                (liked ? "Unlike post" : "Like post")
-                        + ", " + likes + " likes"
-        );
-    }
-
-    // ----------------------------------------------------
-    // COMMENTS
-    // ----------------------------------------------------
 
     private void showComments(String postId) {
-
-        JSONObject post = findPost(getPosts(), postId);
-
-        if (post == null) return;
-
+        if (!isAdded() || !student) return;
         LinearLayout layout = new LinearLayout(requireContext());
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(dp(18), dp(12), dp(18), dp(12));
-
-        android.widget.ScrollView scroll =
-                new android.widget.ScrollView(requireContext());
-
-        LinearLayout commentList =
-                new LinearLayout(requireContext());
-
-        commentList.setOrientation(LinearLayout.VERTICAL);
-
-        scroll.addView(commentList);
-
-        layout.addView(
-                scroll,
-                new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        0,
-                        1f
-                )
-        );
-
+        android.widget.ScrollView scroll = new android.widget.ScrollView(requireContext());
+        LinearLayout list = new LinearLayout(requireContext());
+        list.setOrientation(LinearLayout.VERTICAL);
+        scroll.addView(list);
+        LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(260));
+        layout.addView(scroll, scrollParams);
         EditText input = new EditText(requireContext());
         input.setHint("Write a comment...");
-        input.setMaxLines(4);
-        input.setMaxEms(300);
         input.setSingleLine(false);
-        input.setInputType(
-                android.text.InputType.TYPE_CLASS_TEXT
-                        | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
-                        | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-        );
-        input.setFilters(new android.text.InputFilter[]{
-                new android.text.InputFilter.LengthFilter(300)
-        });
-
+        input.setMaxLines(4);
+        input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(300)});
         layout.addView(input);
-
         TextView send = new TextView(requireContext());
-        send.setText("Send comment");
-        send.setTextColor(
-                requireContext().getColor(R.color.white)
-        );
-        send.setTypeface(null, Typeface.BOLD);
-        send.setGravity(Gravity.CENTER);
-        send.setMinHeight(dp(48));
+        send.setText("Send comment"); send.setTypeface(null, Typeface.BOLD);
+        send.setGravity(Gravity.CENTER); send.setMinHeight(dp(48));
+        send.setTextColor(requireContext().getColor(R.color.white));
         send.setBackgroundResource(R.drawable.bg_chip_selected);
-
-        LinearLayout.LayoutParams sendParams =
-                new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                );
-
-        sendParams.topMargin = dp(8);
-        layout.addView(send, sendParams);
-
+        layout.addView(send);
         AlertDialog dialog = new AlertDialog.Builder(requireContext())
-                .setTitle("Comments")
-                .setView(layout)
-                .setNegativeButton("Close", null)
-                .create();
-
-        dialog.setOnShowListener(ignored -> {
-
-            // Give the comment area space inside the dialog.
-            scroll.getLayoutParams().height = dp(260);
-            scroll.getLayoutParams().width =
-                    ViewGroup.LayoutParams.MATCH_PARENT;
-            scroll.requestLayout();
-
-            renderComments(postId, commentList);
-
-            send.setOnClickListener(v -> {
-
-                String message =
-                        input.getText().toString().trim();
-
-                if (message.isEmpty()) {
-                    input.setError("Write a comment first.");
-                    return;
-                }
-
-                if (addComment(postId, message)) {
-                    input.setText("");
-                    renderComments(postId, commentList);
-                    displayPosts();
-                }
+                .setTitle("Comments").setView(layout).setNegativeButton("Close", null).create();
+        renderComments(postId, list);
+        send.setOnClickListener(v -> {
+            String message = input.getText().toString().trim();
+            if (message.isEmpty()) { input.setError("Write a comment first."); return; }
+            executeMutation("Unable to send comment", t -> request(t, "POST", api("feed_comments", ""),
+                    new JSONObject().put("post_id", postId).put("body", message)), () -> {
+                toast("Comment posted."); dialog.dismiss();
             });
         });
-
         dialog.show();
     }
 
-    private boolean addComment(String postId, String message) {
-
-        JSONArray posts = getPosts();
-        JSONObject post = findPost(posts, postId);
-
-        if (post == null) return false;
-
-        try {
-            JSONArray comments = post.optJSONArray("comments");
-
-            if (comments == null) {
-                comments = new JSONArray();
-            }
-
-            JSONObject comment = new JSONObject();
-
-            comment.put("id", UUID.randomUUID().toString());
-            comment.put("text", message);
-            comment.put("createdAt", System.currentTimeMillis());
-            comment.put("mine", true);
-
-            comments.put(comment);
-
-            post.put("comments", comments);
-
-            savePosts(posts);
-
-            return true;
-
-        } catch (Exception e) {
-            toast("Unable to save comment.");
-            return false;
-        }
-    }
-
-    private void renderComments(
-            String postId, LinearLayout container) {
-
+    private void renderComments(String postId, LinearLayout container) {
         container.removeAllViews();
-
-        JSONObject post = findPost(getPosts(), postId);
-
-        if (post == null) return;
-
-        JSONArray comments = post.optJSONArray("comments");
-
-        if (comments == null || comments.length() == 0) {
-
+        List<Comment> list = commentsByPost.get(postId);
+        if (list == null || list.isEmpty()) {
             TextView empty = new TextView(requireContext());
             empty.setText("No comments yet. Be the first.");
-            empty.setTextColor(
-                    requireContext().getColor(R.color.muted)
-            );
             empty.setPadding(0, dp(12), 0, dp(12));
-
-            container.addView(empty);
-            return;
+            container.addView(empty); return;
         }
-
-        for (int i = 0; i < comments.length(); i++) {
-
-            JSONObject comment = comments.optJSONObject(i);
-
-            if (comment == null) continue;
-
+        for (Comment comment : list) {
             LinearLayout row = new LinearLayout(requireContext());
             row.setOrientation(LinearLayout.VERTICAL);
             row.setPadding(0, dp(10), 0, dp(10));
-
-            TextView author = new TextView(requireContext());
-            author.setText(
-                    (comment.optBoolean("mine")
-                            ? "You"
-                            : "Anonymous student")
-                            + " · "
-                            + timeAgo(comment.optLong("createdAt"))
-            );
-            author.setTypeface(null, Typeface.BOLD);
-            author.setTextColor(
-                    requireContext().getColor(R.color.navy)
-            );
-            author.setTextSize(13);
-
+            TextView name = new TextView(requireContext());
+            name.setText((myId.equals(comment.authorId) ? "You" : "Anonymous user")
+                    + " · " + timeAgo(comment.createdAt));
+            name.setTypeface(null, Typeface.BOLD);
+            name.setTextColor(requireContext().getColor(R.color.navy));
             TextView body = new TextView(requireContext());
-            body.setText(comment.optString("text"));
-            body.setTextColor(
-                    requireContext().getColor(R.color.ink)
-            );
-            body.setTextSize(15);
+            body.setText(comment.body);
             body.setPadding(0, dp(4), 0, dp(4));
-
-            row.addView(author);
-            row.addView(body);
-
-            if (comment.optBoolean("mine")) {
-
-                String commentId = comment.optString("id");
-
+            row.addView(name); row.addView(body);
+            if (myId.equals(comment.authorId)) {
                 TextView delete = new TextView(requireContext());
                 delete.setText("Delete comment");
-                delete.setTextColor(
-                        requireContext().getColor(R.color.red)
-                );
-                delete.setTextSize(13);
-                delete.setMinHeight(dp(40));
-                delete.setGravity(Gravity.CENTER_VERTICAL);
-
-                delete.setOnClickListener(v ->
-                        new AlertDialog.Builder(requireContext())
-                                .setTitle("Delete comment?")
-                                .setNegativeButton("Cancel", null)
-                                .setPositiveButton("Delete", (d, w) -> {
-                                    deleteComment(postId, commentId);
-                                    renderComments(postId, container);
-                                    displayPosts();
-                                })
-                                .show()
-                );
-
+                delete.setTextColor(requireContext().getColor(R.color.red));
+                delete.setGravity(Gravity.CENTER_VERTICAL); delete.setMinHeight(dp(40));
+                delete.setOnClickListener(v -> new AlertDialog.Builder(requireContext())
+                        .setTitle("Delete comment?").setNegativeButton("Cancel", null)
+                        .setPositiveButton("Delete", (d, w) -> executeMutation("Unable to delete comment", t ->
+                                        request(t, "DELETE", api("feed_comments", "id=eq." + encoded(comment.id)), null),
+                                () -> { toast("Comment deleted."); container.removeAllViews(); }))
+                        .show());
                 row.addView(delete);
             }
-
             container.addView(row);
         }
     }
 
-    private void deleteComment(
-            String postId, String commentId) {
-
-        JSONArray posts = getPosts();
-        JSONObject post = findPost(posts, postId);
-
-        if (post == null) return;
-
-        JSONArray oldComments =
-                post.optJSONArray("comments");
-
-        if (oldComments == null) return;
-
-        JSONArray updated = new JSONArray();
-
-        for (int i = 0; i < oldComments.length(); i++) {
-
-            JSONObject comment =
-                    oldComments.optJSONObject(i);
-
-            if (comment != null
-                    && !commentId.equals(
-                    comment.optString("id"))) {
-                updated.put(comment);
-            }
-        }
-
-        try {
-            post.put("comments", updated);
-            savePosts(posts);
-        } catch (Exception e) {
-            toast("Unable to delete comment.");
-        }
-    }
-
-    // ----------------------------------------------------
-    // DELETE POST
-    // ----------------------------------------------------
-
-    private void confirmDeletePost(String postId) {
-
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Delete post?")
-                .setMessage(
-                        "This post and all its comments will be deleted."
-                )
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Delete", (dialog, which) ->
-                        deletePost(postId)
-                )
-                .show();
-    }
-
-    private void deletePost(String postId) {
-
-        JSONArray oldPosts = getPosts();
-        JSONArray updated = new JSONArray();
-
-        String photoToDelete = "";
-
-        for (int i = 0; i < oldPosts.length(); i++) {
-
-            JSONObject post = oldPosts.optJSONObject(i);
-
-            if (post == null) continue;
-
-            if (postId.equals(post.optString("id"))) {
-                photoToDelete = post.optString("photo", "");
-            } else {
-                updated.put(post);
-            }
-        }
-
-        savePosts(updated);
-
-        if (!photoToDelete.isEmpty()) {
-            deleteOwnedPhoto(photoToDelete);
-        }
-
-        displayPosts();
-        toast("Post deleted.");
-    }
-
-    // ----------------------------------------------------
-    // PHOTO PICKER
-    // ----------------------------------------------------
-
-    private void handleSelectedPhoto(Uri uri) {
-
-        if (uri == null || getContext() == null) return;
-
-        try {
-            File directory = new File(
-                    requireContext().getFilesDir(),
-                    "feed_photos"
-            );
-
-            if (!directory.exists() && !directory.mkdirs()) {
-                throw new Exception("Unable to create photo folder.");
-            }
-
-            File file = new File(
-                    directory,
-                    UUID.randomUUID().toString() + ".jpg"
-            );
-
-            try (InputStream input =
-                         requireContext().getContentResolver()
-                                 .openInputStream(uri);
-                 FileOutputStream output =
-                         new FileOutputStream(file)) {
-
-                if (input == null) {
-                    throw new Exception("Unable to open photo.");
-                }
-
-                byte[] buffer = new byte[8192];
-                int bytes;
-                long total = 0;
-
-                while ((bytes = input.read(buffer)) != -1) {
-
-                    total += bytes;
-
-                    if (total > MAX_PHOTO_BYTES) {
-                        throw new Exception("Photo exceeds 5 MB.");
-                    }
-
-                    output.write(buffer, 0, bytes);
-                }
-
-            } catch (Exception e) {
-                file.delete();
-                throw e;
-            }
-
-            BitmapFactory.Options options =
-                    new BitmapFactory.Options();
-
-            options.inSampleSize = 4;
-
-            Bitmap bitmap = BitmapFactory.decodeFile(
-                    file.getAbsolutePath(),
-                    options
-            );
-
-            if (bitmap == null) {
-                file.delete();
-                throw new Exception("Invalid photo.");
-            }
-
-            // Delete a previous unsent selection.
-            if (selectedPhotoPath != null) {
-                deleteOwnedPhoto(selectedPhotoPath);
-            }
-
-            selectedPhotoPath = file.getAbsolutePath();
-
-            ivPreview.setImageBitmap(bitmap);
-            ivPreview.setVisibility(View.VISIBLE);
-            tvAddPhoto.setText("Change photo");
-
-        } catch (Exception e) {
-            toast("Unable to add photo. Use an image under 5 MB.");
-        }
-    }
-
-    private void showPhoto(ImageView image, String path) {
-
-        File file = new File(path);
-
-        if (!file.isFile()) {
-            image.setVisibility(View.GONE);
-            return;
-        }
-
-        BitmapFactory.Options options =
-                new BitmapFactory.Options();
-
-        options.inSampleSize = 4;
-
-        Bitmap bitmap = BitmapFactory.decodeFile(
-                file.getAbsolutePath(),
-                options
-        );
-
-        if (bitmap != null) {
-            image.setImageBitmap(bitmap);
-            image.setVisibility(View.VISIBLE);
-        } else {
-            image.setVisibility(View.GONE);
-        }
-    }
-
-    private void deleteOwnedPhoto(String path) {
-
-        try {
-            File directory = new File(
-                    requireContext().getFilesDir(),
-                    "feed_photos"
-            ).getCanonicalFile();
-
-            File file = new File(path).getCanonicalFile();
-
-            if (file.getParentFile() != null
-                    && file.getParentFile().equals(directory)) {
-                file.delete();
-            }
-
-        } catch (Exception ignored) {
-        }
-    }
-
-    // ----------------------------------------------------
-    // SHARED PREFERENCES STORAGE
-    // ----------------------------------------------------
-
-    private JSONArray getPosts() {
-
-        try {
-            String saved = prefs.getString(POSTS_KEY, "[]");
-            return new JSONArray(saved);
-        } catch (Exception e) {
-            return new JSONArray();
-        }
-    }
-
-    private void savePosts(JSONArray posts) {
-
-        prefs.edit()
-                .putString(POSTS_KEY, posts.toString())
-                .apply();
-    }
-
-    private JSONObject findPost(
-            JSONArray posts, String postId) {
-
-        for (int i = 0; i < posts.length(); i++) {
-
-            JSONObject post = posts.optJSONObject(i);
-
-            if (post != null
-                    && postId.equals(post.optString("id"))) {
-                return post;
-            }
-        }
-
-        return null;
-    }
-
-    // ----------------------------------------------------
-    // HELPERS
-    // ----------------------------------------------------
-
     private String timeAgo(long timestamp) {
-
-        long difference = Math.max(
-                0,
-                System.currentTimeMillis() - timestamp
-        );
-
-        long minutes = difference / 60000;
-
+        long minutes = Math.max(0, System.currentTimeMillis() - timestamp) / 60000;
         if (minutes < 1) return "Just now";
         if (minutes < 60) return minutes + " min ago";
-
-        long hours = minutes / 60;
-
-        if (hours < 24) return hours + " h ago";
-
-        long days = hours / 24;
-
-        return days == 1
-                ? "1 day ago"
-                : days + " days ago";
+        if (minutes < 1440) return (minutes / 60) + " h ago";
+        return (minutes / 1440) + " days ago";
     }
-
-    private void toast(String message) {
-
-        if (getContext() != null) {
-            Toast.makeText(
-                    getContext(),
-                    message,
-                    Toast.LENGTH_SHORT
-            ).show();
-        }
-    }
-
-    private int dp(int value) {
-
-        return (int) (
-                value * getResources()
-                        .getDisplayMetrics().density
-        );
-    }
-
-    @Override
-    public void onDestroyView() {
-        etPost = null;
-        ivPreview = null;
-        tvAddPhoto = null;
-        tvPost = null;
-        tvEmpty = null;
-        listContainer = null;
+    private int dp(int v) { return (int)(v * getResources().getDisplayMetrics().density); }
+    private void toast(String s) { if (getContext() != null) Toast.makeText(requireContext(), s, Toast.LENGTH_SHORT).show(); }
+    @Override public void onDestroyView() {
+        etPost = null; tvPost = null; tvEmpty = null; tvAddPhoto = null;
+        ivPreview = null; listContainer = null;
         super.onDestroyView();
     }
+    @Override public void onDestroy() { worker.shutdown(); super.onDestroy(); }
 }
+
 

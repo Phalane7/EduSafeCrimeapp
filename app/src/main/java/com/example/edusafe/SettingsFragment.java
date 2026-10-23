@@ -20,6 +20,14 @@ public class SettingsFragment extends Fragment {
         SharedPreferences prefs = requireContext().getSharedPreferences("app_settings", 0);
         bind(v.findViewById(R.id.switchLocation), prefs, "include_report_location", true);
         bind(v.findViewById(R.id.switchConfirmSos), prefs, "confirm_sos", true);
+        v.findViewById(R.id.btnSettingsBack).setOnClickListener(view -> {
+            if (getParentFragmentManager().getBackStackEntryCount() > 0) {
+                getParentFragmentManager().popBackStack();
+            } else {
+                getParentFragmentManager().beginTransaction()
+                        .replace(R.id.container, new ProfileFragment()).commit();
+            }
+        });
         return v;
     }
 
