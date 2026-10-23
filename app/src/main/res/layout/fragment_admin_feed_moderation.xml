@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="#EAF0FF"
+    android:paddingStart="18dp" android:paddingEnd="18dp" android:paddingTop="14dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:orientation="horizontal">
+        <TextView android:id="@+id/moderationBack" android:layout_width="44dp"
+            android:layout_height="44dp" android:gravity="center" android:text="‹"
+            android:textSize="32sp" android:textColor="#10275D"
+            android:background="@drawable/mod_white_card" android:clickable="true"
+            android:focusable="true" android:contentDescription="Back to admin dashboard" />
+        <TextView android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:layout_marginStart="12dp"
+            android:text="News Feed Moderation" android:textSize="21sp"
+            android:textStyle="bold" android:textColor="#10275D" />
+    </LinearLayout>
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="12dp" android:text="ADMIN WORKSPACE" android:textSize="11sp"
+        android:textStyle="bold" android:textColor="#4267B2" />
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="5dp" android:text="Review student posts and comments. Only admins can see student email addresses."
+        android:textColor="#65718B" android:textSize="14sp" />
+    <TextView android:id="@+id/moderationRefresh" android:layout_width="match_parent"
+        android:layout_height="52dp" android:layout_marginTop="18dp"
+        android:background="@drawable/mod_blue_button" android:gravity="center"
+        android:text="⟳  Refresh Posts" android:textColor="#FFFFFF" android:textSize="15sp"
+        android:textStyle="bold" android:clickable="true" android:focusable="true" />
+    <TextView android:id="@+id/moderationStatus" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="14dp"
+        android:layout_marginBottom="12dp" android:text="Loading posts..."
+        android:textSize="13sp" android:textStyle="bold" android:textColor="#10275D" />
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:fillViewport="true" android:clipToPadding="false">
+        <LinearLayout android:id="@+id/moderationItems" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:orientation="vertical"
+            android:paddingBottom="28dp" />
+    </ScrollView>
+</LinearLayout>
